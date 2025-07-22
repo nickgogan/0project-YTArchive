@@ -1,4 +1,38 @@
-# Python-generated files
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+.VENV/
+env/
+venv/
+.env
+
+# IDE / Editor specific
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# YTArchive specific output directories
+/videos/
+/metadata/
+/logs/
+
+# Local configuration - do not commit secrets
+config.toml
 __pycache__/
 *.py[oc]
 build/
