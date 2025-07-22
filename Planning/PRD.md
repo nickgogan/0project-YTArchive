@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-YouTube Archive is a Python-based personal archiving tool designed to backup YouTube content and metadata. The tool provides a CLI interface for extracting video metadata, downloading videos, and organizing content in a structured local file system.
+YouTube Archive is a Python-based personal archiving tool designed to backup YouTube content and metadata. The tool provides a CLI interface for extracting video metadata, downloading videos, and organizing content in a structured local file system. The services are designed to be modular and extensible, with a focus on maintainability and scalability. Services will communicate via HTTP calls and be coordinated through a Jobs service.
 
 ## Project Overview
 
@@ -12,6 +12,7 @@ Create a reliable, efficient tool for personal YouTube content archiving that re
 ### Goals
 - Archive personal YouTube content with metadata preservation
 - Provide flexible access via CLI
+- Provide REST API-based communication between the CLI and the services, as well as between the services via a Jobs service that coordinates activity
 - Maintain organized local storage structure
 - Handle errors gracefully with progress tracking
 
@@ -34,6 +35,9 @@ Create a reliable, efficient tool for personal YouTube content archiving that re
 ### Core Features (MVP)
 
 #### 1. Metadata Extraction Service
+- **Service Architecture**
+  - Separate microservices with HTTP communication
+  - Coordinated by a central Jobs service
 - **Video Metadata**
   - Title, description, duration, upload date
   - Video ID and URL
@@ -92,6 +96,17 @@ Create a reliable, efficient tool for personal YouTube content archiving that re
 - Track quota usage
 - Provide warnings when approaching limits
 
+### Error Handling & Recovery
+- Automatic retries (3 attempts)
+- Use of backoff logic before retry
+- Failed downloads queued for manual review via Jobs service
+- Partial downloads resumed from failure
+
+### Configuration Management
+- Central configuration file
+- Environment variables for sensitive info
+- Each service sectioned within the config file
+
 ### Interface Specifications
 
 #### CLI Interface
@@ -108,6 +123,19 @@ ytarchive metadata <video_id|playlist_id>
 --api-key: YouTube API key
 ```
 
+#### REST API
+```
+POST /api/download
+  Body: { "video_id": "xxx", "options": {...} }
+
+GET /api/metadata/{video_id}
+GET /api/playlist/{playlist_id}
+GET /api/status/{job_id}
+
+POST /api/work-plan
+  Body: { "video_ids": [...] }
+```
+
 ### Future Enhancements (Version 2+)
 
 1. **Batch Operations**
@@ -115,17 +143,27 @@ ytarchive metadata <video_id|playlist_id>
    - Parallel downloads
    - Bulk metadata extraction
 
-2. **Advanced Download Features**
+2. **Service Communication Enhancements**
+   - Implementation of shared databases or message queues
+   - Introduction of webhooks for notifications
+   - Conversion of synchronous operations to asynchronous
+
+3. **Advanced Job Management**
+   - Enhanced job tracking and state management
+   - Integration with a centralized logging service
+   - Duplicate request detection
+
+4. **Advanced Download Features**
    - Resume capability for interrupted downloads
    - Quality selection options
    - Audio extraction option
 
-3. **Cloud Integration**
+5. **Cloud Integration**
    - AWS S3 backup
    - Google Drive sync
    - Automated cloud upload
 
-4. **Enhanced Management**
+6. **Enhanced Management**
    - Duplicate detection
    - Storage optimization
    - Archive verification
