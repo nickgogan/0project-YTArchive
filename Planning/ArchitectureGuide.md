@@ -40,42 +40,18 @@ This document captures all architectural decisions and design choices made for t
 
 ### Port Assignment
 - **Decision**: Fixed ports in configuration
-- **Default Ports**:
-  - Jobs Service: 8000
-  - Metadata Service: 8001
-  - Download Service: 8002
-  - Storage Service: 8003
-  - Logging Service: 8004
-- **Configuration**: Overridable in config file
+- **Rationale**: Predictable service locations, easy local development
+- **Alternative Rejected**: Dynamic port assignment (adds complexity)
 
 ### Service Discovery
 - **Decision**: Simple service registry in Jobs service
-- **Implementation**: Jobs service maintains service URLs
-- **Registration**: Services register on startup
-- **Health Checks**: Regular polling of service health
+- **Rationale**: Centralized registry without external dependencies
+- **Alternative Rejected**: External service discovery (Consul, etcd)
 
 ### Project Structure
-- **Decision**: Service-focused structure
-- **Layout**:
-  ```
-  ytarchive/
-  ├── services/
-  │   ├── jobs/
-  │   ├── metadata/
-  │   ├── download/
-  │   ├── storage/
-  │   ├── logging/
-  │   └── common/
-  ├── cli/
-  └── tests/
-  ```
-- **Rationale**: Clear service boundaries, easier to understand
-
-### Service Startup
-- **Decision**: Any order with health checks
-- **Implementation**: Services retry connections until dependencies available
-- **Health Endpoint**: Each service exposes `/health`
-- **Timeout**: 30 seconds for all services to be healthy
+- **Decision**: Service-focused monorepo structure
+- **Rationale**: Clear service boundaries while maintaining shared code
+- **Alternative Rejected**: Separate repositories per service
 
 ## Dependency Management
 
@@ -121,32 +97,22 @@ This document captures all architectural decisions and design choices made for t
 
 ## Configuration Management
 
-### Configuration Storage
-- **Decision**: Single config file with service sections
-- **Format**: TOML (Python native, cleaner for nested configs)
-- **Location**: `config.toml` in project root
-- **Structure**: Sections per service
-
-### Sensitive Data
-- **Decision**: Environment variables for API keys and sensitive settings
-- **Example**: `YOUTUBE_API_KEY` environment variable
+### Configuration Strategy
+- **Decision**: TOML configuration file with environment variable overrides
+- **Rationale**: TOML is Python-friendly, supports complex structures
+- **Alternative Rejected**: YAML (parsing complexity), JSON (no comments)
 
 ## API Design
 
-### Synchronous vs Asynchronous Operations
-- **Current Decision**: Synchronous operations
-- **Future Enhancement**: Make operations asynchronous in Phase 2 or 3
-- **Implementation**: Return job IDs for long-running operations
+### API Pattern
+- **Decision**: RESTful HTTP APIs with JSON payloads
+- **Rationale**: Simple, well-understood, good tooling support
+- **Alternative Rejected**: gRPC (complexity), GraphQL (overkill)
 
-### Long-running Operations
-- **Solution**: Jobs service tracks all operations and their states
-- **Progress Tracking**: Real-time updates via polling
-- **Future**: Webhook support in Phase 3
-
-### CLI/API Integration
-- **Decision**: CLI commands directly call service code
-- **Authentication**: No authentication between CLI and APIs
-- **Rationale**: Simpler for personal use
+### Operation Model
+- **Decision**: Job-based asynchronous operations
+- **Rationale**: Long-running downloads need progress tracking
+- **Alternative Rejected**: Synchronous blocking calls
 
 ## Data Flow
 
@@ -161,33 +127,22 @@ This document captures all architectural decisions and design choices made for t
 
 ## Error Handling & Recovery
 
-### Automatic Retries
-- **Decision**: Up to 3 attempts with exponential backoff
-- **Fallback**: Queue for manual retry via Jobs service after 3 failed attempts
-- **Work Plans**: Failed downloads tracked for manual intervention
-
-### Partial Downloads
-- **Decision**: Resume from point of failure
-- **Implementation**: Track download progress and resume capability
+### Error Strategy
+- **Decision**: Automatic retries with exponential backoff, then manual intervention
+- **Rationale**: Balance automation with avoiding infinite loops
+- **Alternative Rejected**: Immediate failure (poor user experience)
 
 ## Logging & Monitoring
 
-### Logging Strategy
-- **Decision**: Centralized logging via dedicated Logging service
-- **Level**: INFO by default (configurable per service)
-- **Format**: Structured JSON logs
-- **Storage**: Local files with rotation
-- **Retention**: 30 days default
+### Logging Architecture
+- **Decision**: Centralized structured logging service
+- **Rationale**: Single place to query all service logs
+- **Alternative Rejected**: Per-service log files (hard to correlate)
 
-### Monitoring
-- **Progress Tracking**: INFO level detail
-- **Metrics**: Services emit metrics/events
-- **Health Checks**: Regular polling of service health
-
-### State Management
-- **Download Progress**: Persisted via Jobs service
-- **Download History**: Tracked via Jobs service
-- **Duplicate Detection**: Not implemented (Phase 3 enhancement)
+### Monitoring Approach
+- **Decision**: Service health checks and metrics collection
+- **Rationale**: Essential for distributed system visibility
+- **Alternative Rejected**: External monitoring stack (complexity)
 
 ## Development Approach
 
@@ -248,3 +203,9 @@ This document captures all architectural decisions and design choices made for t
 | 2024-01-22 | TOML for configuration | Python native, cleaner syntax |
 | 2024-01-22 | Fixed ports with config override | Simple discovery, predictable |
 | 2024-01-22 | Compatible version pinning (~=) | Balance stability with security updates |
+| 2024-01-22 | HTTP/REST over gRPC | Simpler implementation, better debugging |
+| 2024-01-22 | Jobs service orchestration | Central coordination simpler than choreography |
+| 2024-01-22 | File-based job storage | Simple, portable, no database dependencies |
+| 2024-01-22 | No caching in v1 | Reduce complexity for initial implementation |
+| 2024-01-22 | Monorepo structure | Easier dependency management |
+| 2024-01-22 | Centralized logging service | Single place to query all service logs |
