@@ -1,4 +1,81 @@
-# Architecture Decisions
+# YouTube Archive - Architecture Decisions
+
+This document captures all architectural decisions and design choices made for the YouTube Archive project.
+
+## Table of Contents
+1. [Service Architecture](#service-architecture)
+2. [Service Infrastructure](#service-infrastructure)
+3. [Dependency Management](#dependency-management)
+4. [Configuration Management](#configuration-management)
+5. [API Design](#api-design)
+6. [Data Flow](#data-flow)
+7. [Error Handling & Recovery](#error-handling--recovery)
+8. [Logging & Monitoring](#logging--monitoring)
+9. [Development Approach](#development-approach)
+10. [Versioning Strategy](#versioning-strategy)
+11. [Future Enhancements](#future-enhancements)
+
+## Service Architecture
+
+### Service Granularity
+- **Decision**: Separate processes/microservices that communicate via HTTP
+- **Rationale**: Clear service boundaries, easier to maintain and scale
+- **Alternative Rejected**: Monolithic application with modules
+
+### Communication Protocol
+- **Decision**: HTTP/REST between services
+- **Format**: JSON payloads
+- **Authentication**: None initially (internal only)
+- **Future**: Consider message queues in Phase 3
+
+### Service Coordination
+- **Decision**: Jobs service as central coordinator
+- **Pattern**: Orchestration (not choreography)
+- **State Management**: Jobs service maintains all cross-service state
+- **Components**:
+  - Jobs Service: Captures cross-service work
+  - JobExecutor: Executes individual services
+
+## Service Infrastructure
+
+### Port Assignment
+- **Decision**: Fixed ports in configuration
+- **Default Ports**:
+  - Jobs Service: 8000
+  - Metadata Service: 8001
+  - Download Service: 8002
+  - Storage Service: 8003
+  - Logging Service: 8004
+- **Configuration**: Overridable in config file
+
+### Service Discovery
+- **Decision**: Simple service registry in Jobs service
+- **Implementation**: Jobs service maintains service URLs
+- **Registration**: Services register on startup
+- **Health Checks**: Regular polling of service health
+
+### Project Structure
+- **Decision**: Service-focused structure
+- **Layout**:
+  ```
+  ytarchive/
+  ├── services/
+  │   ├── jobs/
+  │   ├── metadata/
+  │   ├── download/
+  │   ├── storage/
+  │   ├── logging/
+  │   └── common/
+  ├── cli/
+  └── tests/
+  ```
+- **Rationale**: Clear service boundaries, easier to understand
+
+### Service Startup
+- **Decision**: Any order with health checks
+- **Implementation**: Services retry connections until dependencies available
+- **Health Endpoint**: Each service exposes `/health`
+- **Timeout**: 30 seconds for all services to be healthy
 
 ## Dependency Management
 
@@ -42,6 +119,88 @@
 - **Benefits**: Consistent versions, easier management
 - **Future**: Can split if services diverge significantly
 
+## Configuration Management
+
+### Configuration Storage
+- **Decision**: Single config file with service sections
+- **Format**: TOML (Python native, cleaner for nested configs)
+- **Location**: `config.toml` in project root
+- **Structure**: Sections per service
+
+### Sensitive Data
+- **Decision**: Environment variables for API keys and sensitive settings
+- **Example**: `YOUTUBE_API_KEY` environment variable
+
+## API Design
+
+### Synchronous vs Asynchronous Operations
+- **Current Decision**: Synchronous operations
+- **Future Enhancement**: Make operations asynchronous in Phase 2 or 3
+- **Implementation**: Return job IDs for long-running operations
+
+### Long-running Operations
+- **Solution**: Jobs service tracks all operations and their states
+- **Progress Tracking**: Real-time updates via polling
+- **Future**: Webhook support in Phase 3
+
+### CLI/API Integration
+- **Decision**: CLI commands directly call service code
+- **Authentication**: No authentication between CLI and APIs
+- **Rationale**: Simpler for personal use
+
+## Data Flow
+
+### Metadata Service Integration
+- **Decision**: Metadata service must always be called before video download
+- **Optimization**: Only persist metadata if it differs from the latest payload
+- **Validation**: Each service validates its inputs
+
+### Data Isolation
+- **Decision**: Services are completely isolated (no shared data store)
+- **Future**: Consider shared database in Phase 3
+
+## Error Handling & Recovery
+
+### Automatic Retries
+- **Decision**: Up to 3 attempts with exponential backoff
+- **Fallback**: Queue for manual retry via Jobs service after 3 failed attempts
+- **Work Plans**: Failed downloads tracked for manual intervention
+
+### Partial Downloads
+- **Decision**: Resume from point of failure
+- **Implementation**: Track download progress and resume capability
+
+## Logging & Monitoring
+
+### Logging Strategy
+- **Decision**: Centralized logging via dedicated Logging service
+- **Level**: INFO by default (configurable per service)
+- **Format**: Structured JSON logs
+- **Storage**: Local files with rotation
+- **Retention**: 30 days default
+
+### Monitoring
+- **Progress Tracking**: INFO level detail
+- **Metrics**: Services emit metrics/events
+- **Health Checks**: Regular polling of service health
+
+### State Management
+- **Download Progress**: Persisted via Jobs service
+- **Download History**: Tracked via Jobs service
+- **Duplicate Detection**: Not implemented (Phase 3 enhancement)
+
+## Development Approach
+
+### Architecture Strategy
+- **Decision**: Design for microservices from the start
+- **Rationale**: Easier to maintain boundaries
+- **Communication**: Direct HTTP calls initially
+
+### Deployment
+- **Decision**: Simple process-based deployment
+- **No Docker**: Keep it simple for personal use
+- **Process Manager**: Optional (systemd, supervisor)
+
 ## Versioning Strategy
 
 ### Version Format
@@ -61,107 +220,31 @@
 - **Decision**: All services share project version initially
 - **Future**: Independent versioning if services are decoupled
 
-## Service Architecture
-
-### Communication Protocol
-- **Decision**: HTTP/REST between services
-- **Format**: JSON payloads
-- **Authentication**: None initially (internal only)
-
-### Service Coordination
-- **Decision**: Jobs service as central coordinator
-- **Pattern**: Orchestration (not choreography)
-- **State**: Jobs service maintains all cross-service state
-
-### Data Flow
-- **Decision**: Metadata service always called before downloads
-- **Persistence**: Only save if metadata differs from latest
-- **Validation**: Each service validates its inputs
-
-### Error Handling
-- **Retry Logic**: 3 attempts with exponential backoff
-- **Failed Jobs**: Queued in Jobs service for manual review
-- **Partial Downloads**: Resume from failure point
-
-### Configuration
-- **Decision**: Single config file with service sections
-- **Format**: YAML or TOML (TBD)
-- **Secrets**: Environment variables only
-- **Location**: `~/.ytarchive/config.yml` or project root
-
-### Logging
-- **Decision**: Centralized logging service
-- **Level**: INFO by default
-- **Format**: Structured JSON logs
-- **Storage**: Local files with rotation
-
-## Development Approach
-
-### Initial Architecture
-- **Decision**: Start with microservices architecture
-- **Rationale**: Easier to maintain boundaries from start
-- **Communication**: Direct HTTP calls initially
-
-### Deployment
-- **Decision**: Simple process-based deployment
-- **No Docker**: Keep it simple for personal use
-- **Process Manager**: Optional (systemd, supervisor)
-
-## Service Infrastructure
-
-### Port Assignment
-- **Decision**: Fixed ports in configuration
-- **Default Ports**:
-  - Jobs Service: 8000
-  - Metadata Service: 8001
-  - Download Service: 8002
-  - Storage Service: 8003
-  - Logging Service: 8004
-- **Configuration**: Overridable in config file
-
-### Service Discovery
-- **Decision**: Simple service registry in Jobs service
-- **Implementation**: Jobs service maintains service URLs
-- **Registration**: Services register on startup
-- **Health Checks**: Regular polling of service health
-
-### Project Structure
-- **Decision**: Service-focused structure
-- **Layout**:
-  ```
-  ytarchive/
-  ├── services/
-  │   ├── jobs/
-  │   ├── metadata/
-  │   ├── download/
-  │   ├── storage/
-  │   ├── logging/
-  │   └── common/
-  ├── cli/
-  └── tests/
-  ```
-- **Rationale**: Clear service boundaries, easier to understand
-
-### Configuration Format
-- **Decision**: TOML format
-- **Rationale**: Python native, cleaner for nested configs
-- **File**: `config.toml` in project root
-- **Structure**: Sections per service
-
-### Service Startup
-- **Decision**: Any order with health checks
-- **Implementation**: Services retry connections until dependencies available
-- **Health Endpoint**: Each service exposes `/health`
-- **Timeout**: 30 seconds for all services to be healthy
-
-## Future Considerations
+## Future Enhancements
 
 ### Phase 2 Enhancements
 - Asynchronous operations
-- Webhook support
-- Shared database consideration
+- Batch operations (channel-wide archiving, parallel downloads)
+- Resume capability for interrupted downloads
+- Quality selection options
 
 ### Phase 3 Enhancements
-- Duplicate detection
+- Webhook support for notifications
+- Shared database consideration
+- Message queue integration (Redis/RabbitMQ)
+- Duplicate request detection
 - Enhanced state management
 - Performance optimizations
+- Cloud integration (AWS S3, Google Drive)
+- Archive verification
+
+---
+
+## Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2024-01-22 | Microservices architecture | Clear boundaries, easier to maintain |
+| 2024-01-22 | TOML for configuration | Python native, cleaner syntax |
+| 2024-01-22 | Fixed ports with config override | Simple discovery, predictable |
+| 2024-01-22 | Compatible version pinning (~=) | Balance stability with security updates |
