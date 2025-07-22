@@ -1,0 +1,61 @@
+# YTArchive Configuration File
+# Copy this to config.toml and update with your settings
+
+[general]
+version = "0.1.0"
+environment = "development"  # development, production
+
+[storage]
+# Main output directory for downloaded content
+base_path = "~/YTArchive"
+metadata_dir = "metadata"
+videos_dir = "videos"
+
+# Data directory for application data (jobs, registry, logs, etc.)
+base_data_dir = "~/.ytarchive/data"
+jobs_dir = "${base_data_dir}/jobs"
+registry_dir = "${base_data_dir}/registry"
+work_plans_dir = "${base_data_dir}/work_plans"
+tmp_dir = "${base_data_dir}/tmp"
+logs_dir = "${base_data_dir}/logs"
+
+[youtube]
+# Set YOUTUBE_API_KEY environment variable instead of putting key here
+quota_limit = 10000
+quota_reserve = 1000
+
+[services.jobs]
+host = "localhost"
+port = 8000
+log_level = "INFO"
+
+[services.metadata]
+host = "localhost"
+port = 8001
+log_level = "INFO"
+cache_ttl = 3600  # 1 hour
+
+[services.download]
+host = "localhost"
+port = 8002
+log_level = "INFO"
+max_retries = 3
+quality_preference = "1080p"
+format_preference = "mp4"
+
+[services.storage]
+host = "localhost"
+port = 8003
+log_level = "INFO"
+
+[services.logging]
+host = "localhost"
+port = 8004
+log_level = "INFO"
+retention_days = 30
+max_file_size_mb = 100
+
+[cli]
+default_output_dir = "~/YTArchive"
+progress_bar = true
+color_output = true
