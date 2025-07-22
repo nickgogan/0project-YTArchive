@@ -8,12 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project structure with five microservices architecture
-- Comprehensive planning documentation:
+- Set up foundational project infrastructure:
+  - Established a stable Python 3.12 environment with `uv`.
+  - Configured Git, `.gitignore`, and VS Code settings.
+  - Implemented automated code quality checks with `pre-commit` (Black, Ruff, Mypy).
+  - Created initial `pytest` structure for testing.
+- Created comprehensive planning and design documentation:
   - Product Requirements Document (PRD.md)
-  - Architecture Guide (ArchitectureGuide.md)
-  - Implementation Guide (ImplementationGuide.md)
-  - Individual service specifications in ServiceSpecifications/
+  - Architecture and Implementation Guides
+  - Detailed Service Specifications
   - Future Features roadmap (FutureFeatures.md)
 - Service specifications for:
   - Jobs Service (port 8000) - Central coordinator
