@@ -39,3 +39,8 @@ ytarchive = "cli.main:cli"
 
 [tool.setuptools]
 packages = ["cli", "services"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::PendingDeprecationWarning:starlette.formparsers",
+]
