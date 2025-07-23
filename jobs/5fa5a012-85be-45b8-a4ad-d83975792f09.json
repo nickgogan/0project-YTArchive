@@ -1,0 +1,11 @@
+{
+  "job_id": "5fa5a012-85be-45b8-a4ad-d83975792f09",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=test1"
+  ],
+  "created_at": "2025-07-23T00:39:06.208522+00:00",
+  "updated_at": "2025-07-23T00:39:06.208522+00:00",
+  "options": {}
+}

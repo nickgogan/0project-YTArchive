@@ -1,0 +1,14 @@
+{
+  "service_name": "test-service",
+  "host": "localhost",
+  "port": 8001,
+  "health_endpoint": "/health",
+  "description": "Test service",
+  "tags": [
+    "test",
+    "microservice"
+  ],
+  "registered_at": "2025-07-23T00:41:51.333047+00:00",
+  "last_health_check": null,
+  "is_healthy": true
+}

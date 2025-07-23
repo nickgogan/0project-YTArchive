@@ -1,0 +1,13 @@
+{
+  "job_id": "f191a9a0-8aaa-4a01-8dee-3f2f80cac54f",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=persistence_test"
+  ],
+  "created_at": "2025-07-23T00:41:51.330022+00:00",
+  "updated_at": "2025-07-23T00:41:51.330022+00:00",
+  "options": {
+    "test": "value"
+  }
+}

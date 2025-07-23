@@ -1,0 +1,14 @@
+{
+  "service_name": "persistence-test",
+  "host": "localhost",
+  "port": 8004,
+  "health_endpoint": "/health",
+  "description": null,
+  "tags": [
+    "persistence",
+    "test"
+  ],
+  "registered_at": "2025-07-23T00:41:51.344969+00:00",
+  "last_health_check": null,
+  "is_healthy": true
+}

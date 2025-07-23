@@ -200,3 +200,28 @@ class LogMessage(BaseModel):
     message: str
     log_type: LogType = LogType.RUNTIME
     data: Optional[Dict[str, Any]] = None
+
+
+class ServiceRegistration(BaseModel):
+    """Model for service registration in the registry."""
+
+    service_name: str
+    host: str
+    port: int
+    health_endpoint: str = "/health"
+    description: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+
+
+class RegisteredService(BaseModel):
+    """Model representing a registered service with its status."""
+
+    service_name: str
+    host: str
+    port: int
+    health_endpoint: str
+    description: Optional[str] = None
+    tags: List[str]
+    registered_at: datetime
+    last_health_check: Optional[datetime] = None
+    is_healthy: bool = True
