@@ -133,15 +133,21 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 ## Phase 3: CLI and Integration (Week 3)
 
 ### 3.1 CLI Implementation (Days 13-14)
-- [ ] Basic CLI structure with Click
-- [ ] Commands:
-  - `ytarchive download <video_id>`
-  - `ytarchive metadata <video_id>`
-  - `ytarchive status <job_id>`
-  - `ytarchive logs`
-- [ ] Add basic log viewer CLI command (from logging service)
-- [ ] Configuration file support
-- [ ] Progress display for downloads
+- [x] Basic CLI structure with Click
+- [x] Commands:
+  - `ytarchive download <video_id>` (with quality selection, output path, metadata-only mode)
+  - `ytarchive metadata <video_id>` (with formatted and JSON output)
+  - `ytarchive status <job_id>` (with watch mode for continuous monitoring)
+  - `ytarchive logs` (with service/level filtering and follow mode)
+- [x] Add basic log viewer CLI command (from logging service)
+- [x] Progress display for downloads (real-time progress bars with speed/ETA)
+- [x] Rich terminal UI with colors, tables, and panels
+- [x] Comprehensive error handling and input validation
+- [x] Full async API integration with all services
+- [x] Comprehensive test suite with 28 passing tests
+- [ ] Configuration file support (deferred to future enhancement)
+
+**Phase 3.1 Status: ✅ COMPLETED**
 
 ### 3.2 End-to-End Integration (Days 15-16)
 - [ ] Full workflow testing:
