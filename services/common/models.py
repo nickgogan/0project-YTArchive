@@ -1,5 +1,5 @@
 """Common models shared across all services."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from enum import Enum
 
@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 class LogLevel(str, Enum):
     """Log levels for the logging service."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -17,6 +18,7 @@ class LogLevel(str, Enum):
 
 class JobType(str, Enum):
     """Types of jobs that can be created."""
+
     VIDEO_DOWNLOAD = "VIDEO_DOWNLOAD"
     PLAYLIST_DOWNLOAD = "PLAYLIST_DOWNLOAD"
     METADATA_ONLY = "METADATA_ONLY"
@@ -24,6 +26,7 @@ class JobType(str, Enum):
 
 class JobStatus(str, Enum):
     """Status of a job."""
+
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -33,6 +36,7 @@ class JobStatus(str, Enum):
 
 class DownloadStatus(str, Enum):
     """Status of a download task."""
+
     DOWNLOADING = "DOWNLOADING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
@@ -41,6 +45,7 @@ class DownloadStatus(str, Enum):
 
 class ErrorDetail(BaseModel):
     """Error details for API responses."""
+
     code: str
     message: str
     details: Optional[Dict[str, Any]] = None
@@ -48,6 +53,7 @@ class ErrorDetail(BaseModel):
 
 class ServiceResponse(BaseModel):
     """Standard response format for all services."""
+
     success: bool
     data: Optional[Any] = None
     error: Optional[ErrorDetail] = None
@@ -56,6 +62,7 @@ class ServiceResponse(BaseModel):
 
 class HealthCheck(BaseModel):
     """Health check response for services."""
+
     service: str
     status: str = Field(pattern="^(healthy|unhealthy)$")
     version: str
@@ -65,6 +72,7 @@ class HealthCheck(BaseModel):
 
 class ServiceRequest(BaseModel):
     """Standard request format for inter-service communication."""
+
     trace_id: str
     timestamp: datetime
     data: Dict[str, Any]
@@ -73,6 +81,7 @@ class ServiceRequest(BaseModel):
 # Error codes used across services
 class ErrorCode:
     """Standard error codes."""
+
     API_QUOTA_EXCEEDED = "E001"
     VIDEO_UNAVAILABLE = "E002"
     NETWORK_TIMEOUT = "E003"
@@ -86,6 +95,7 @@ class ErrorCode:
 # Job-related models
 class JobOptions(BaseModel):
     """Options for job execution."""
+
     output_dir: str = "~/YTArchive"
     quality: str = "1080p"
     include_metadata: bool = True
@@ -97,6 +107,7 @@ class JobOptions(BaseModel):
 
 class JobResult(BaseModel):
     """Result of processing a single video/item."""
+
     video_id: str
     status: str = Field(pattern="^(success|failed|skipped)$")
     message: Optional[str] = None
@@ -110,6 +121,7 @@ class JobResult(BaseModel):
 # Playlist-related models
 class PlaylistVideo(BaseModel):
     """Video entry in a playlist."""
+
     video_id: str
     position: int
     title: str
@@ -121,6 +133,7 @@ class PlaylistVideo(BaseModel):
 # Work plan models
 class UnavailableVideo(BaseModel):
     """Track videos that cannot be downloaded."""
+
     video_id: str
     title: Optional[str] = None
     reason: str = Field(pattern="^(private|deleted|region_blocked|age_restricted)$")
@@ -131,6 +144,7 @@ class UnavailableVideo(BaseModel):
 
 class FailedDownload(BaseModel):
     """Track failed download attempts."""
+
     video_id: str
     title: str
     attempts: int
@@ -143,6 +157,7 @@ class FailedDownload(BaseModel):
 # Progress tracking
 class Progress(BaseModel):
     """Progress information for long-running operations."""
+
     current: int
     total: int
     percentage: float
@@ -154,12 +169,34 @@ class Progress(BaseModel):
 # Health check extension
 class HealthStatus(BaseModel):
     """Extended health status with detailed checks."""
+
     healthy: bool
-    checks: Dict[str, bool] = Field(default_factory=lambda: {
-        "http_responsive": True,
-        "dependencies_available": True,
-        "no_critical_errors": True,
-        "disk_space_available": True
-    })
+    checks: Dict[str, bool] = Field(
+        default_factory=lambda: {
+            "http_responsive": True,
+            "dependencies_available": True,
+            "no_critical_errors": True,
+            "disk_space_available": True,
+        }
+    )
     message: Optional[str] = None
     last_error: Optional[str] = None
+
+
+class LogType(str, Enum):
+    """Enum for log types, corresponding to subdirectories in the logs folder."""
+
+    RUNTIME = "runtime"
+    FAILED_DOWNLOADS = "failed_downloads"
+    ERROR_REPORTS = "error_reports"
+
+
+class LogMessage(BaseModel):
+    """A structured log message that services can send to the LoggingService."""
+
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    service: str
+    level: LogLevel
+    message: str
+    log_type: LogType = LogType.RUNTIME
+    data: Optional[Dict[str, Any]] = None
