@@ -86,15 +86,30 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 **Phase 2.1 Status: ✅ COMPLETED**
 
 ### 2.2 Metadata Service (Days 8-9)
-- [ ] YouTube API client wrapper
-  - Quota tracking
-  - Automatic retry with backoff
-- [ ] Video metadata endpoint
-  - GET `/api/v1/metadata/video/{video_id}`
-- [ ] Playlist metadata endpoint
-  - GET `/api/v1/metadata/playlist/{playlist_id}`
-- [ ] Metadata caching to reduce API calls
-- [ ] Integration tests with mock YouTube API
+- [x] **YouTube API integration**
+  - Complete MetadataService implementation with google-api-python-client
+  - Quota management (10,000 daily limit with 1,000 reserve)
+  - Exponential backoff retry for network errors
+  - Proper authentication with YOUTUBE_API_KEY environment variable
+- [x] **API endpoints implementation**
+  - GET `/api/v1/metadata/video/{video_id}` - Single video metadata with full details
+  - GET `/api/v1/metadata/playlist/{playlist_id}` - Playlist metadata with video list
+  - POST `/api/v1/metadata/batch` - Batch processing up to 50 video IDs
+  - GET `/api/v1/metadata/quota` - Real-time quota status tracking
+  - GET `/health` - Service health check endpoint
+- [x] **Advanced features**
+  - In-memory caching with TTL (1hr videos, 30min playlists)
+  - Duration parsing from ISO 8601 format (PT3M33S → 213 seconds)
+  - Thumbnail URL extraction from nested API response structure
+  - Private video detection in playlists
+  - Comprehensive error handling (quota exceeded, unavailable videos)
+- [x] **Testing and quality**
+  - Comprehensive test suite with 17 tests covering all endpoints
+  - Mocked YouTube API responses for reliable testing
+  - Edge cases including quota limits, caching, and error scenarios
+  - Type-safe implementation with proper Pydantic models
+
+**Phase 2.2 Status: ✅ COMPLETED**
 
 ### 2.3 Download Service Core (Days 10-12)
 - [ ] yt-dlp integration
