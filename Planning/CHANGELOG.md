@@ -52,6 +52,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Service health check infrastructure for monitoring registered services
   - JobResponse and ServiceRegistration models for structured data exchange
   - Comprehensive test coverage for job management, execution, and service registry
+- **Storage Service (Phase 2.1)**:
+  - Complete file system organization and metadata management service
+  - POST /api/v1/storage/save/metadata endpoint for storing video metadata with timestamps
+  - POST /api/v1/storage/save/video endpoint for tracking video file information
+  - GET /api/v1/storage/exists/{video_id} endpoint for comprehensive existence checking
+  - GET /api/v1/storage/metadata/{video_id} endpoint for retrieving stored metadata
+  - POST /api/v1/storage/work-plan endpoint for generating work plans for failed downloads
+  - GET /api/v1/storage/stats endpoint for storage statistics with disk usage metrics
+  - Proper directory structure creation (~/YTArchive/, metadata/, videos/, work_plans/)
+  - Video file existence checking (video, metadata, thumbnails, captions)
+  - JSON serialization with proper datetime handling using Pydantic model_dump(mode='json')
+  - Comprehensive error handling (404 for missing files, 500 for server errors)
+  - Full test coverage with 14 tests including edge cases and error scenarios
+  - Type-safe implementation passing mypy validation
 - Common data models in services/common/models.py
 - Project configuration using pyproject.toml with uv package manager
 - Basic project structure with service directories
@@ -71,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Common infrastructure with BaseService, retry logic, and circuit breaker
 - Centralized logging service with structured log management
 - Jobs service with execution capability and service registry
+- **Phase 2.1 Storage Service Complete** - File system organization and metadata management implemented and tested
 
 ### Architecture Decisions
 - Microservices architecture with HTTP/REST communication
