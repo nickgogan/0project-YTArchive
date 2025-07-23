@@ -49,12 +49,18 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
   - POST `/api/v1/jobs` endpoint
   - File-based job persistence
   - Job status tracking
-- [ ] Service registry functionality
+- [x] Service registry functionality
   - POST `/api/v1/registry/register`
   - GET `/api/v1/registry/services`
+  - DELETE `/api/v1/registry/services/{service_name}`
   - Health check monitoring
-- [ ] Basic job execution (synchronous)
-- [ ] Write comprehensive tests
+- [x] Basic job execution (synchronous)
+  - PUT `/api/v1/jobs/{job_id}/execute`
+  - Job status lifecycle (PENDING → RUNNING → COMPLETED/FAILED)
+  - Basic processing for VIDEO_DOWNLOAD, PLAYLIST_DOWNLOAD, METADATA_ONLY
+- [x] Write comprehensive tests
+
+**Phase 1.4 Status: ✅ COMPLETED**
 
 ## Phase 2: Core Services (Week 2)
 

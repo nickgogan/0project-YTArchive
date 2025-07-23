@@ -38,6 +38,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Directory-based log organization (runtime, failed_downloads, error_reports)
   - `LogMessage`, `LogType`, and `LogLevel` models for inter-service logging
   - Comprehensive unit tests covering API endpoints and file operations
+- **Jobs Service Core (Phase 1.4)**:
+  - Complete jobs management and service registry
+  - POST /api/v1/jobs endpoint for job creation with file-based persistence
+  - GET /api/v1/jobs/{job_id} endpoint for job retrieval by ID
+  - GET /api/v1/jobs endpoint for listing jobs with optional status filtering
+  - PUT /api/v1/jobs/{job_id}/execute endpoint for job execution with status tracking
+  - Basic synchronous job processing for VIDEO_DOWNLOAD, PLAYLIST_DOWNLOAD, and METADATA_ONLY
+  - Job status lifecycle management (PENDING → RUNNING → COMPLETED/FAILED)
+  - POST /api/v1/registry/register endpoint for service registration
+  - GET /api/v1/registry/services endpoint for listing registered services
+  - DELETE /api/v1/registry/services/{service_name} endpoint for service unregistration
+  - Service health check infrastructure for monitoring registered services
+  - JobResponse and ServiceRegistration models for structured data exchange
+  - Comprehensive test coverage for job management, execution, and service registry
 - Common data models in services/common/models.py
 - Project configuration using pyproject.toml with uv package manager
 - Basic project structure with service directories
@@ -51,6 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ServicesSpecification.md → individual files in ServiceSpecifications/
 - Updated service models to use proper typing and Pydantic BaseModel
 - Clarified service responsibilities and API contracts
+
+### Completed
+- **Phase 1 Infrastructure Complete** - All foundation services implemented and tested
+- Common infrastructure with BaseService, retry logic, and circuit breaker
+- Centralized logging service with structured log management
+- Jobs service with execution capability and service registry
 
 ### Architecture Decisions
 - Microservices architecture with HTTP/REST communication
