@@ -41,13 +41,12 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
   - [x] Log rotation and retention (daily log files)
   - [x] Directory-based log organization (runtime, failed_downloads, error_reports)
 - [x] Create structured logging models for other services (LogMessage, LogType, LogLevel)
-- [ ] Add basic log viewer CLI command
 - [x] Write unit tests
 
 ### 1.4 Jobs Service Core (Days 3-5)
-- [ ] Implement job creation and storage
+- [x] Implement job creation and management
   - POST `/api/v1/jobs` endpoint
-  - File-based job persistence
+  - In-memory job storage (enhanced to file-based in Phase 2.1)
   - Job status tracking
 - [x] Service registry functionality
   - POST `/api/v1/registry/register`
@@ -71,6 +70,7 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
   - GET `/api/v1/storage/path/{video_id}`
 - [ ] Disk space validation
 - [ ] File organization logic
+- [ ] Enhance Jobs service with file-based job persistence
 - [ ] Integration with Jobs service
 
 ### 2.2 Metadata Service (Days 8-9)
@@ -103,6 +103,7 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
   - `ytarchive metadata <video_id>`
   - `ytarchive status <job_id>`
   - `ytarchive logs`
+- [ ] Add basic log viewer CLI command (from logging service)
 - [ ] Configuration file support
 - [ ] Progress display for downloads
 
