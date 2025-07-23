@@ -272,3 +272,87 @@ async def test_service_registry_file_persistence(jobs_service: JobsService):
         assert saved_data["host"] == "localhost"
         assert saved_data["port"] == 8004
         assert saved_data["tags"] == ["persistence", "test"]
+
+
+@pytest.mark.asyncio
+async def test_execute_job(jobs_service: JobsService):
+    """Test executing a job."""
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        # Create a job first
+        job_data = {
+            "job_type": "VIDEO_DOWNLOAD",
+            "urls": ["https://www.youtube.com/watch?v=execute_test"],
+            "options": {},
+        }
+
+        create_response = await client.post("/api/v1/jobs", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # Execute the job
+        execute_response = await client.put(f"/api/v1/jobs/{job_id}/execute")
+        assert execute_response.status_code == 200
+
+        result = execute_response.json()
+        assert result["job_id"] == job_id
+        assert result["status"] == "COMPLETED"  # Should be completed after execution
+        assert "updated_at" in result
+
+
+@pytest.mark.asyncio
+async def test_execute_nonexistent_job(jobs_service: JobsService):
+    """Test executing a job that doesn't exist."""
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        response = await client.put("/api/v1/jobs/nonexistent-id/execute")
+        assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_job_status_updates(jobs_service: JobsService):
+    """Test that job status is properly updated during execution."""
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        # Create a job
+        job_data = {
+            "job_type": "METADATA_ONLY",
+            "urls": ["https://www.youtube.com/watch?v=status_test"],
+            "options": {},
+        }
+
+        create_response = await client.post("/api/v1/jobs", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # Initial status should be PENDING
+        get_response = await client.get(f"/api/v1/jobs/{job_id}")
+        assert get_response.json()["status"] == "PENDING"
+
+        # Execute the job
+        execute_response = await client.put(f"/api/v1/jobs/{job_id}/execute")
+        assert execute_response.status_code == 200
+
+        # Final status should be COMPLETED
+        final_response = await client.get(f"/api/v1/jobs/{job_id}")
+        assert final_response.json()["status"] == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_execute_already_completed_job(jobs_service: JobsService):
+    """Test executing a job that's already completed."""
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        # Create and execute a job
+        job_data = {
+            "job_type": "VIDEO_DOWNLOAD",
+            "urls": ["https://www.youtube.com/watch?v=already_completed"],
+            "options": {},
+        }
+
+        create_response = await client.post("/api/v1/jobs", json=job_data)
+        job_id = create_response.json()["job_id"]
+
+        # Execute the job first time
+        first_execute = await client.put(f"/api/v1/jobs/{job_id}/execute")
+        assert first_execute.status_code == 200
+        assert first_execute.json()["status"] == "COMPLETED"
+
+        # Execute the job again - should return the same result without re-processing
+        second_execute = await client.put(f"/api/v1/jobs/{job_id}/execute")
+        assert second_execute.status_code == 200
+        assert second_execute.json()["status"] == "COMPLETED"

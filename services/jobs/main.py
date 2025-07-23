@@ -101,6 +101,27 @@ class JobsService(BaseService):
                     detail=f"Failed to list jobs: {str(e)}",
                 )
 
+        @self.app.put(
+            "/api/v1/jobs/{job_id}/execute", tags=["Jobs"], response_model=JobResponse
+        )
+        async def execute_job(job_id: str):
+            """Execute a job by ID."""
+            try:
+                result = await self._execute_job(job_id)
+                if not result:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Job {job_id} not found",
+                    )
+                return result
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to execute job: {str(e)}",
+                )
+
     def _add_registry_routes(self):
         """Add service registry routes."""
 
@@ -211,6 +232,90 @@ class JobsService(BaseService):
         # Sort by created_at (newest first)
         jobs.sort(key=lambda x: x.created_at, reverse=True)
         return jobs
+
+    async def _execute_job(self, job_id: str) -> Optional[JobResponse]:
+        """Execute a job with basic synchronous processing."""
+        # Get the current job
+        job = await self._get_job(job_id)
+        if not job:
+            return None
+
+        # Check if job is already running or completed
+        if job.status not in [JobStatus.PENDING, JobStatus.FAILED]:
+            return job
+
+        try:
+            # Update job status to RUNNING
+            updated_job = await self._update_job_status(job_id, JobStatus.RUNNING)
+            if not updated_job:
+                return None
+            job = updated_job
+
+            # Basic synchronous job execution logic
+            await self._process_job(job)
+
+            # Update job status to COMPLETED
+            updated_job = await self._update_job_status(job_id, JobStatus.COMPLETED)
+            if not updated_job:
+                return None
+            job = updated_job
+
+        except Exception as e:
+            # Update job status to FAILED on error
+            failed_job = await self._update_job_status(job_id, JobStatus.FAILED)
+            if failed_job:
+                job = failed_job
+            # Log the error (in a real implementation, we'd use our logging service)
+            print(f"Job {job_id} failed with error: {str(e)}")
+
+        return job
+
+    async def _update_job_status(
+        self, job_id: str, new_status: JobStatus
+    ) -> Optional[JobResponse]:
+        """Update the status of a job and persist changes."""
+        job_file = self.jobs_dir / f"{job_id}.json"
+        if not job_file.exists():
+            return None
+
+        # Read current job data
+        with open(job_file, "r") as f:
+            job_data = json.load(f)
+
+        # Update status and timestamp
+        job_data["status"] = new_status.value
+        job_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+        # Save updated job data
+        with open(job_file, "w") as f:
+            json.dump(job_data, f, indent=2)
+
+        return JobResponse(**job_data)
+
+    async def _process_job(self, job: JobResponse):
+        """Process a job based on its type. This is a basic implementation."""
+        import asyncio
+
+        if job.job_type == JobType.VIDEO_DOWNLOAD:
+            # Simulate video download processing
+            print(f"Processing video download job for URLs: {job.urls}")
+            await asyncio.sleep(1)  # Simulate work
+            print(f"Video download completed for job {job.job_id}")
+
+        elif job.job_type == JobType.PLAYLIST_DOWNLOAD:
+            # Simulate playlist download processing
+            print(f"Processing playlist download job for URLs: {job.urls}")
+            await asyncio.sleep(2)  # Simulate more work
+            print(f"Playlist download completed for job {job.job_id}")
+
+        elif job.job_type == JobType.METADATA_ONLY:
+            # Simulate metadata extraction
+            print(f"Processing metadata extraction for URLs: {job.urls}")
+            await asyncio.sleep(0.5)  # Simulate quick work
+            print(f"Metadata extraction completed for job {job.job_id}")
+
+        else:
+            raise ValueError(f"Unknown job type: {job.job_type}")
 
     async def _register_service(
         self, registration: ServiceRegistration
