@@ -24,6 +24,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Download Service (port 8002) - Video downloading with yt-dlp
   - Storage Service (port 8003) - File system management
   - Logging Service (port 8004) - Centralized logging
+- **Common Infrastructure (Phase 1.2)**:
+  - `BaseService` class for consistent service architecture with FastAPI integration
+  - Pydantic-based configuration management with environment support
+  - Retry logic with exponential backoff decorator for resilient operations
+  - Circuit breaker implementation for fault tolerance
+  - Comprehensive test fixtures and mocks for service testing
+  - Health check endpoints for all services
+- **Logging Service (Phase 1.3)**:
+  - Centralized logging service with REST API (`/log` endpoint for writing, `/logs` endpoint for reading)
+  - Log retrieval with advanced filtering capabilities (by service, level, log_type, date, and result limit)
+  - Structured log storage with JSON format in daily files
+  - Directory-based log organization (runtime, failed_downloads, error_reports)
+  - `LogMessage`, `LogType`, and `LogLevel` models for inter-service logging
+  - Comprehensive unit tests covering API endpoints and file operations
 - Common data models in services/common/models.py
 - Project configuration using pyproject.toml with uv package manager
 - Basic project structure with service directories

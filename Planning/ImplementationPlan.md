@@ -23,25 +23,26 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 - [x] Configure VS Code settings for project
 
 ### 1.2 Common Infrastructure (Days 1-2)
-- [ ] Implement service base class (`services/common/base.py`)
-  - Configuration loading from TOML
+- [x] Implement service base class (`services/common/base.py`)
+  - Configuration loading with Pydantic Settings
   - Health check endpoint
-  - Graceful shutdown handling
-  - Basic HTTP server setup
-- [ ] Implement shared utilities (`services/common/utils.py`)
-  - Path validation functions
+  - Graceful shutdown handling (placeholder)
+  - Basic HTTP server setup with uvicorn
+- [x] Implement shared utilities (`services/common/utils.py`)
+  - Path validation functions (placeholder)
   - Retry logic with exponential backoff
   - Circuit breaker implementation
-- [ ] Create test fixtures and mocks
+- [x] Create test fixtures and mocks
 
 ### 1.3 Logging Service (Days 2-3)
-- [ ] Implement core logging service
-  - POST `/api/v1/logs` endpoint
-  - GET `/api/v1/logs` with filtering
-  - Log rotation and retention
-- [ ] Create structured logging client for other services
+- [x] Implement core logging service
+  - [x] POST `/log` endpoint for receiving log messages
+  - [x] GET `/logs` endpoint with filtering (by service, level, log_type, date, limit)
+  - [x] Log rotation and retention (daily log files)
+  - [x] Directory-based log organization (runtime, failed_downloads, error_reports)
+- [x] Create structured logging models for other services (LogMessage, LogType, LogLevel)
 - [ ] Add basic log viewer CLI command
-- [ ] Write unit tests
+- [x] Write unit tests
 
 ### 1.4 Jobs Service Core (Days 3-5)
 - [ ] Implement job creation and storage

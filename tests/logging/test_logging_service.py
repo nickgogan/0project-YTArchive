@@ -75,3 +75,55 @@ async def test_log_file_creation(logging_service: LoggingService):
         assert log_entry["service"] == "TestService"
         assert log_entry["level"] == "INFO"
         assert log_entry["message"] == "Test message"
+
+
+@pytest.mark.asyncio
+async def test_get_logs_endpoint(logging_service: LoggingService):
+    """Test that the GET /logs endpoint retrieves logs with filtering."""
+    # First, create some test log messages
+    log_messages = [
+        LogMessage(
+            service="ServiceA",
+            level=LogLevel.INFO,
+            message="Info message from ServiceA",
+            log_type=LogType.RUNTIME,
+        ),
+        LogMessage(
+            service="ServiceB",
+            level=LogLevel.ERROR,
+            message="Error message from ServiceB",
+            log_type=LogType.ERROR_REPORTS,
+        ),
+    ]
+
+    # Write the logs
+    for log_msg in log_messages:
+        await logging_service._write_log_to_file(log_msg)
+
+    # Test the GET endpoint
+    async with AsyncClient(app=logging_service.app, base_url="http://test") as client:
+        # Test getting all logs
+        response = await client.get("/logs")
+        assert response.status_code == 200
+        result = response.json()
+        assert "logs" in result
+        assert "count" in result
+        assert result["count"] >= 2  # Should have at least our 2 test logs
+
+        # Test filtering by service
+        response = await client.get("/logs?service=ServiceA")
+        assert response.status_code == 200
+        result = response.json()
+        assert result["count"] >= 1
+        # All returned logs should be from ServiceA
+        for log in result["logs"]:
+            assert log["service"] == "ServiceA"
+
+        # Test filtering by level
+        response = await client.get("/logs?level=ERROR")
+        assert response.status_code == 200
+        result = response.json()
+        assert result["count"] >= 1
+        # All returned logs should be ERROR level
+        for log in result["logs"]:
+            assert log["level"] == "ERROR"
