@@ -65,10 +65,12 @@ async def test_log_file_creation(logging_service: LoggingService):
 
     assert expected_file.exists()
 
-    # Check the file content
+    # Check the file content (read the last line since there might be multiple entries)
     with open(expected_file, "r") as f:
-        content = f.read().strip()
-        log_entry = json.loads(content)
+        lines = f.read().strip().split("\n")
+        # Get the last line (our test log entry)
+        last_line = lines[-1]
+        log_entry = json.loads(last_line)
 
         assert log_entry["service"] == "TestService"
         assert log_entry["level"] == "INFO"
