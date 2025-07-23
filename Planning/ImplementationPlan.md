@@ -112,14 +112,23 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 **Phase 2.2 Status: ✅ COMPLETED**
 
 ### 2.3 Download Service Core (Days 10-12)
-- [ ] yt-dlp integration
+- [x] yt-dlp integration
   - POST `/api/v1/download/video`
+  - GET `/api/v1/download/progress/{task_id}`
+  - POST `/api/v1/download/cancel/{task_id}`
+  - GET `/api/v1/download/formats/{video_id}`
   - Progress tracking implementation
   - Error handling for common failures
-- [ ] Thumbnail download support
-- [ ] Caption extraction (English only)
-- [ ] Integration with Storage service for paths
-- [ ] Integration with Jobs service for status updates
+- [x] Thumbnail download support
+- [x] Caption extraction (English only)
+- [x] Quality selection (best, 1080p, 720p, 480p, 360p, audio)
+- [x] Concurrent download management with semaphore
+- [x] Background task lifecycle management
+- [x] Comprehensive test suite with 21 tests
+- [ ] Integration with Storage service for paths (Phase 3)
+- [ ] Integration with Jobs service for status updates (Phase 3)
+
+**Phase 2.3 Status: ✅ COMPLETED**
 
 ## Phase 3: CLI and Integration (Week 3)
 

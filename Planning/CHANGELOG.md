@@ -78,6 +78,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive error handling and type safety
   - Comprehensive testing (17 tests, all passing with no warnings)
   - Code quality validation (Black, Ruff, mypy)
+- **Download Service** - Complete yt-dlp integration for video downloads
+  - API endpoints: video download, progress tracking, cancellation, format querying
+  - Full yt-dlp integration with async task-based downloads
+  - Real-time progress tracking with callback hooks
+  - Quality selection (best, 1080p, 720p, 480p, 360p, audio)
+  - Thumbnail and caption extraction support
+  - Concurrent download management (max 3 simultaneous with semaphore)
+  - Background task lifecycle management to prevent async warnings
+  - Task cancellation and cleanup mechanisms
+  - Thread pool execution for blocking yt-dlp operations
+  - Comprehensive testing (21 tests, 100% pass rate)
+  - Type-safe implementation with proper async task management
 - Common data models in services/common/models.py
 - Project configuration using pyproject.toml with uv package manager
 - Basic project structure with service directories
