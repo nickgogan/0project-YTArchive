@@ -1,0 +1,11 @@
+{
+  "job_id": "8f558de1-a3bd-4ef1-8364-99a435380559",
+  "job_type": "METADATA_ONLY",
+  "status": "COMPLETED",
+  "urls": [
+    "https://www.youtube.com/watch?v=status_test"
+  ],
+  "created_at": "2025-07-24T00:34:58.061571+00:00",
+  "updated_at": "2025-07-24T00:34:58.564147+00:00",
+  "options": {}
+}

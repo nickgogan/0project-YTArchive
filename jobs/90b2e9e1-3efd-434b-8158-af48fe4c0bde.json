@@ -1,0 +1,15 @@
+{
+  "job_id": "90b2e9e1-3efd-434b-8158-af48fe4c0bde",
+  "job_type": "PLAYLIST_DOWNLOAD",
+  "status": "RUNNING",
+  "urls": [
+    "https://www.youtube.com/playlist?list=test123"
+  ],
+  "created_at": "2025-07-24T00:25:28.348561+00:00",
+  "updated_at": "2025-07-24T00:25:28.348940+00:00",
+  "options": {
+    "quality": "1080p",
+    "captions": true,
+    "custom_field": "test_value"
+  }
+}

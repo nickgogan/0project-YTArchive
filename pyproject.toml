@@ -44,3 +44,6 @@ packages = ["cli", "services"]
 filterwarnings = [
     "ignore::PendingDeprecationWarning:starlette.formparsers",
 ]
+markers = [
+    "performance: marks tests as performance benchmarks",
+]

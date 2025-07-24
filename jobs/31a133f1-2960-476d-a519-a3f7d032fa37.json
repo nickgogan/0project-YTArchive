@@ -1,0 +1,14 @@
+{
+  "job_id": "31a133f1-2960-476d-a519-a3f7d032fa37",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+  ],
+  "created_at": "2025-07-24T00:32:03.673548+00:00",
+  "updated_at": "2025-07-24T00:32:03.673548+00:00",
+  "options": {
+    "quality": "720p",
+    "output_path": "/var/folders/2d/410rxl_x7ll3g5874zghxc7m0000gp/T/tmp6w84z15j"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "job_id": "598e863b-9655-4a32-8c13-905258c71c47",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=concurrent_4"
+  ],
+  "created_at": "2025-07-24T00:33:49.385963+00:00",
+  "updated_at": "2025-07-24T00:33:49.385963+00:00",
+  "options": {}
+}

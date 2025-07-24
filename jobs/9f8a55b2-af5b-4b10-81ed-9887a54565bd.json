@@ -1,0 +1,13 @@
+{
+  "job_id": "9f8a55b2-af5b-4b10-81ed-9887a54565bd",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=video_3"
+  ],
+  "created_at": "2025-07-24T00:33:49.341628+00:00",
+  "updated_at": "2025-07-24T00:33:49.341628+00:00",
+  "options": {
+    "quality": "720p"
+  }
+}

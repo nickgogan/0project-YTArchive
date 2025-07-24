@@ -1,0 +1,11 @@
+{
+  "job_id": "a2443541-9fdd-4f77-95f6-33b569f458fc",
+  "job_type": "PLAYLIST_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/playlist?list=test"
+  ],
+  "created_at": "2025-07-24T00:34:57.002868+00:00",
+  "updated_at": "2025-07-24T00:34:57.002868+00:00",
+  "options": {}
+}

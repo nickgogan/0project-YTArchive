@@ -1,0 +1,13 @@
+{
+  "job_id": "6b6915c2-1e32-432d-ac56-17e41d2fa78e",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+  ],
+  "created_at": "2025-07-24T00:32:35.985315+00:00",
+  "updated_at": "2025-07-24T00:32:35.985315+00:00",
+  "options": {
+    "quality": "1080p"
+  }
+}

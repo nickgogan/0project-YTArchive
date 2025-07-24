@@ -1,0 +1,11 @@
+{
+  "job_id": "d08e5229-8617-466d-8c0b-803ed6174e35",
+  "job_type": "VIDEO_DOWNLOAD",
+  "status": "PENDING",
+  "urls": [
+    "https://www.youtube.com/watch?v=perf_test"
+  ],
+  "created_at": "2025-07-24T00:33:49.381029+00:00",
+  "updated_at": "2025-07-24T00:33:49.381029+00:00",
+  "options": {}
+}
