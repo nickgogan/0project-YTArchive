@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 
 from services.common.base import BaseService, ServiceSettings
@@ -23,8 +24,8 @@ def mock_service(mock_settings: ServiceSettings) -> MockService:
     return MockService(service_name="MockService", settings=mock_settings)
 
 
-@pytest.fixture
-async def test_client(mock_service: MockService) -> AsyncClient:
+@pytest_asyncio.fixture
+async def test_client(mock_service: MockService):
     """Returns an httpx test client for the mock service."""
     async with AsyncClient(app=mock_service.app, base_url="http://test") as client:
         yield client

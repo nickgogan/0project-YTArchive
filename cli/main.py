@@ -12,6 +12,14 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+
+def safe_error_message(e) -> str:
+    """Safely convert an exception to a string, handling coroutine objects."""
+    if hasattr(e, "__await__"):
+        return f"Async error: {type(e).__name__}"
+    return str(e)
+
+
 # Rich console for styled output
 console = Console()
 
@@ -258,7 +266,7 @@ async def _download_video(
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
 async def _monitor_download_progress(api: YTArchiveAPI, task_id: str):
@@ -353,7 +361,7 @@ async def _get_metadata(video_id: str, json_output: bool):
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
 @cli.command()
@@ -417,7 +425,7 @@ async def _get_job_status(job_id: str, watch: bool):
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
 @cli.command()
@@ -519,7 +527,7 @@ async def _view_logs(
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
 async def _list_workplans(json_output: bool):
@@ -598,7 +606,7 @@ async def _list_workplans(json_output: bool):
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
 async def _show_workplan(plan_id: str, json_output: bool):
@@ -754,7 +762,7 @@ async def _create_workplan(
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
 if __name__ == "__main__":
