@@ -376,13 +376,14 @@ async def test_job_failure_adds_to_work_plan(jobs_service: JobsService):
         job_id = create_response.json()["job_id"]
 
         # Mock httpx.AsyncClient for work plan API call
-        from unittest.mock import AsyncMock, patch
+        from unittest.mock import AsyncMock, Mock, patch
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            # Use Mock for non-async response properties and methods
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"success": True, "plan_id": "test_plan"}
-            mock_response.raise_for_status = AsyncMock()
+            mock_response.raise_for_status = Mock()
 
             mock_client_instance = AsyncMock()
             mock_client_instance.post = AsyncMock(return_value=mock_response)
@@ -435,13 +436,14 @@ async def test_video_id_extraction_from_urls(jobs_service: JobsService):
         job_id = create_response.json()["job_id"]
 
         # Mock httpx.AsyncClient for work plan API call
-        from unittest.mock import AsyncMock, patch
+        from unittest.mock import AsyncMock, Mock, patch
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            # Use Mock for non-async response properties and methods
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"success": True, "plan_id": "test_plan"}
-            mock_response.raise_for_status = AsyncMock()
+            mock_response.raise_for_status = Mock()
 
             mock_client_instance = AsyncMock()
             mock_client_instance.post = AsyncMock(return_value=mock_response)

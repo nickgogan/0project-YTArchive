@@ -15,9 +15,31 @@ from rich.table import Table
 
 def safe_error_message(e) -> str:
     """Safely convert an exception to a string, handling coroutine objects."""
+    import inspect
+    import asyncio
+
+    # Handle coroutine objects specifically
+    if inspect.iscoroutine(e):
+        # Close the coroutine to prevent the warning
+        try:
+            e.close()
+        except Exception:
+            pass
+        return f"Coroutine error: {getattr(e, '__name__', 'unknown')}"
+
+    # Handle other awaitable objects
     if hasattr(e, "__await__"):
-        return f"Async error: {type(e).__name__}"
-    return str(e)
+        return f"Awaitable error: {type(e).__name__}"
+
+    # Handle Task objects
+    if isinstance(e, asyncio.Task):
+        return f"Task error: {e}"
+
+    # For regular exceptions, convert to string safely
+    try:
+        return str(e)
+    except Exception:
+        return f"Error converting exception to string: {type(e).__name__}"
 
 
 # Rich console for styled output
