@@ -37,6 +37,7 @@ class JobResponse(BaseModel):
     created_at: str
     updated_at: str
     options: Dict[str, Any] = {}
+    error_details: Optional[str] = None
 
 
 class JobsService(BaseService):
@@ -262,7 +263,7 @@ class JobsService(BaseService):
 
         except Exception as e:
             # Update job status to FAILED on error
-            failed_job = await self._update_job_status(job_id, JobStatus.FAILED)
+            failed_job = await self._update_job_status(job_id, JobStatus.FAILED, str(e))
             if failed_job:
                 job = failed_job
             # Log the error (in a real implementation, we'd use our logging service)
@@ -271,7 +272,7 @@ class JobsService(BaseService):
         return job
 
     async def _update_job_status(
-        self, job_id: str, new_status: JobStatus
+        self, job_id: str, new_status: JobStatus, error_details: Optional[str] = None
     ) -> Optional[JobResponse]:
         """Update the status of a job and persist changes."""
         job_file = self.jobs_dir / f"{job_id}.json"
@@ -285,6 +286,14 @@ class JobsService(BaseService):
         # Update status and timestamp
         job_data["status"] = new_status.value
         job_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+        # Add error details if provided
+        if error_details:
+            job_data["error_details"] = error_details
+
+        # If job failed, add to work plan for tracking
+        if new_status == JobStatus.FAILED:
+            await self._add_to_work_plan(job_data, error_details)
 
         # Save updated job data
         with open(job_file, "w") as f:
@@ -378,6 +387,64 @@ class JobsService(BaseService):
                 return response.status_code == 200
         except Exception:
             return False
+
+    async def _add_to_work_plan(
+        self, job_data: Dict[str, Any], error_details: Optional[str] = None
+    ):
+        """Add failed job to work plan for tracking and potential retry."""
+        try:
+            # Extract video IDs from job URLs
+            video_ids = []
+            for url in job_data.get("urls", []):
+                # Extract video ID from YouTube URL
+                if "youtube.com/watch?v=" in url:
+                    video_id = url.split("v=")[1].split("&")[0]
+                    video_ids.append(video_id)
+                elif "youtu.be/" in url:
+                    video_id = url.split("/")[-1].split("?")[0]
+                    video_ids.append(video_id)
+
+            if not video_ids:
+                return  # No valid video IDs found
+
+            # Prepare failed downloads data
+            failed_downloads = []
+            for video_id in video_ids:
+                failed_download = {
+                    "video_id": video_id,
+                    "title": f"Failed Job {job_data.get('job_id', 'Unknown')}",
+                    "attempts": 1,  # This could be tracked better in future
+                    "last_attempt": job_data.get(
+                        "updated_at", datetime.now(timezone.utc).isoformat()
+                    ),
+                    "job_id": job_data.get("job_id"),
+                    "job_type": job_data.get("job_type"),
+                    "errors": [error_details]
+                    if error_details
+                    else ["Job execution failed"],
+                }
+                failed_downloads.append(failed_download)
+
+            # Call Storage Service to create/update work plan
+            storage_url = "http://localhost:8003/api/v1/storage/work-plan"
+            payload = {"unavailable_videos": [], "failed_downloads": failed_downloads}
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(storage_url, json=payload)
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("success"):
+                        print(
+                            f"Added failed job {job_data.get('job_id')} to work plan {result.get('data', {}).get('plan_id')}"
+                        )
+                    else:
+                        print(f"Failed to add job to work plan: {result.get('error')}")
+                else:
+                    print(f"Storage service returned status {response.status_code}")
+
+        except Exception as e:
+            # Don't fail the job update if work plan addition fails
+            print(f"Warning: Failed to add job to work plan: {e}")
 
 
 if __name__ == "__main__":

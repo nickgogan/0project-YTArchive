@@ -356,3 +356,157 @@ async def test_execute_already_completed_job(jobs_service: JobsService):
         second_execute = await client.put(f"/api/v1/jobs/{job_id}/execute")
         assert second_execute.status_code == 200
         assert second_execute.json()["status"] == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_job_failure_adds_to_work_plan(jobs_service: JobsService):
+    """Test that failed jobs are automatically added to work plans."""
+    from services.common.models import JobStatus
+
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        # Create a job
+        job_data = {
+            "job_type": "VIDEO_DOWNLOAD",
+            "urls": ["https://www.youtube.com/watch?v=test123"],
+            "options": {"quality": "1080p"},
+        }
+
+        create_response = await client.post("/api/v1/jobs", json=job_data)
+        assert create_response.status_code == 200
+        job_id = create_response.json()["job_id"]
+
+        # Mock httpx.AsyncClient for work plan API call
+        from unittest.mock import AsyncMock, patch
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = AsyncMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {"success": True, "plan_id": "test_plan"}
+            mock_response.raise_for_status = AsyncMock()
+
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_instance.__aenter__ = AsyncMock(
+                return_value=mock_client_instance
+            )
+            mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_client_instance
+
+            # Test _update_job_status with failure
+            await jobs_service._update_job_status(
+                job_id, JobStatus.FAILED, "Test error"
+            )
+
+            # Verify the work plan API was called
+            mock_client_instance.post.assert_called_once()
+            call_args = mock_client_instance.post.call_args
+            assert "work-plan" in call_args[0][0]  # URL contains work-plan
+
+            # Verify the payload contains failed download info
+            payload = call_args[1]["json"]
+            assert "failed_downloads" in payload
+            assert len(payload["failed_downloads"]) == 1
+            assert payload["failed_downloads"][0]["video_id"] == "test123"
+            assert payload["failed_downloads"][0]["errors"] == ["Test error"]
+
+
+@pytest.mark.asyncio
+async def test_video_id_extraction_from_urls(jobs_service: JobsService):
+    """Test video ID extraction from different YouTube URL formats."""
+    from services.common.models import JobStatus
+
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        # Test various URL formats
+        test_urls = [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ",
+            "https://www.youtube.com/watch?v=abc123&t=30s",
+            "https://youtu.be/xyz789?t=60",
+        ]
+
+        job_data = {
+            "job_type": "VIDEO_DOWNLOAD",
+            "urls": test_urls,
+            "options": {"quality": "1080p"},
+        }
+
+        create_response = await client.post("/api/v1/jobs", json=job_data)
+        assert create_response.status_code == 200
+        job_id = create_response.json()["job_id"]
+
+        # Mock httpx.AsyncClient for work plan API call
+        from unittest.mock import AsyncMock, patch
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = AsyncMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {"success": True, "plan_id": "test_plan"}
+            mock_response.raise_for_status = AsyncMock()
+
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_instance.__aenter__ = AsyncMock(
+                return_value=mock_client_instance
+            )
+            mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_client_instance
+
+            # Test _update_job_status with failure
+            await jobs_service._update_job_status(
+                job_id, JobStatus.FAILED, "Test error"
+            )
+
+            # Verify the work plan API was called
+            mock_client_instance.post.assert_called_once()
+            call_args = mock_client_instance.post.call_args
+
+            # Verify the payload contains all extracted video IDs
+            payload = call_args[1]["json"]
+            assert "failed_downloads" in payload
+            assert len(payload["failed_downloads"]) == 4
+
+            # Check extracted video IDs
+            video_ids = [item["video_id"] for item in payload["failed_downloads"]]
+            assert "dQw4w9WgXcQ" in video_ids  # From both formats
+            assert "abc123" in video_ids
+            assert "xyz789" in video_ids
+
+
+@pytest.mark.asyncio
+async def test_work_plan_integration_error_handling(jobs_service: JobsService):
+    """Test error handling when work plan API fails."""
+    from services.common.models import JobStatus
+
+    async with AsyncClient(app=jobs_service.app, base_url="http://test") as client:
+        # Create a job
+        job_data = {
+            "job_type": "VIDEO_DOWNLOAD",
+            "urls": ["https://www.youtube.com/watch?v=test123"],
+            "options": {"quality": "1080p"},
+        }
+
+        create_response = await client.post("/api/v1/jobs", json=job_data)
+        assert create_response.status_code == 200
+        job_id = create_response.json()["job_id"]
+
+        # Mock httpx.AsyncClient to raise an exception
+        from unittest.mock import AsyncMock, patch
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(side_effect=Exception("API Error"))
+            mock_client_instance.__aenter__ = AsyncMock(
+                return_value=mock_client_instance
+            )
+            mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_client_instance
+
+            # Test _update_job_status with failure - should not raise exception
+            result = await jobs_service._update_job_status(
+                job_id, JobStatus.FAILED, "Test error"
+            )
+
+            # Job should still be updated despite work plan API failure
+            assert result is not None
+            assert result.status == "FAILED"
+            assert result.error_details == "Test error"

@@ -30,6 +30,7 @@ dist/
 /videos/
 /metadata/
 /logs/
+/jobs/
 
 # Local configuration - do not commit secrets
 config.toml

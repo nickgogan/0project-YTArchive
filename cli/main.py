@@ -435,6 +435,43 @@ def logs(service: Optional[str], level: Optional[str], lines: int, follow: bool)
     asyncio.run(_view_logs(service, level, lines, follow))
 
 
+@cli.group()
+def workplan() -> None:
+    """Manage work plans for failed and unavailable videos."""
+    pass
+
+
+@workplan.command()
+@click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
+def list(json_output: bool) -> None:
+    """List all work plans."""
+    asyncio.run(_list_workplans(json_output))
+
+
+@workplan.command()
+@click.argument("plan_id")
+@click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
+def show(plan_id: str, json_output: bool) -> None:
+    """Show details of a specific work plan."""
+    asyncio.run(_show_workplan(plan_id, json_output))
+
+
+@workplan.command()
+@click.option(
+    "--unavailable-videos",
+    help="JSON file containing unavailable videos data",
+    type=click.Path(exists=True),
+)
+@click.option(
+    "--failed-downloads",
+    help="JSON file containing failed downloads data",
+    type=click.Path(exists=True),
+)
+def create(unavailable_videos: Optional[str], failed_downloads: Optional[str]) -> None:
+    """Create a new work plan from failed/unavailable videos."""
+    asyncio.run(_create_workplan(unavailable_videos, failed_downloads))
+
+
 async def _view_logs(
     service: Optional[str], level: Optional[str], lines: int, follow: bool
 ):
@@ -479,6 +516,241 @@ async def _view_logs(
 
                 await asyncio.sleep(5)  # Update every 5 seconds
 
+        except httpx.HTTPError as e:
+            console.print(f"[red]HTTP Error: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+
+
+async def _list_workplans(json_output: bool):
+    """Async implementation of work plan listing."""
+    async with YTArchiveAPI() as api:
+        try:
+            # Get storage stats to find work plans directory
+            stats_response = await api.client.get(
+                f"{SERVICES['storage']}/api/v1/storage/stats"
+            )
+            stats_response.raise_for_status()
+
+            # List work plan files from the work plans directory
+            work_plans_dir = Path("~/.ytarchive/data/work_plans").expanduser()
+
+            if not work_plans_dir.exists():
+                if json_output:
+                    console.print(json.dumps({"work_plans": []}))
+                else:
+                    console.print("[yellow]No work plans directory found.[/yellow]")
+                return
+
+            plan_files = list(work_plans_dir.glob("*_plan.json"))
+
+            if not plan_files:
+                if json_output:
+                    console.print(json.dumps({"work_plans": []}))
+                else:
+                    console.print("[yellow]No work plans found.[/yellow]")
+                return
+
+            work_plans = []
+            for plan_file in sorted(plan_files):
+                try:
+                    with open(plan_file) as f:
+                        plan_data = json.load(f)
+
+                    plan_info = {
+                        "plan_id": plan_data.get(
+                            "plan_id", plan_file.stem.replace("_plan", "")
+                        ),
+                        "created_at": plan_data.get("created_at", "Unknown"),
+                        "total_videos": plan_data.get("total_videos", 0),
+                        "unavailable_count": plan_data.get("unavailable_count", 0),
+                        "failed_count": plan_data.get("failed_count", 0),
+                        "path": str(plan_file),
+                    }
+                    work_plans.append(plan_info)
+                except Exception as e:
+                    console.print(f"[red]Error reading {plan_file}: {e}[/red]")
+
+            if json_output:
+                console.print(json.dumps({"work_plans": work_plans}, indent=2))
+            else:
+                if work_plans:
+                    table = Table(title="Work Plans")
+                    table.add_column("Plan ID", style="cyan")
+                    table.add_column("Created", style="green")
+                    table.add_column("Total Videos", justify="right")
+                    table.add_column("Unavailable", justify="right", style="yellow")
+                    table.add_column("Failed", justify="right", style="red")
+
+                    for plan in work_plans:
+                        table.add_row(
+                            plan["plan_id"],
+                            plan["created_at"],
+                            str(plan["total_videos"]),
+                            str(plan["unavailable_count"]),
+                            str(plan["failed_count"]),
+                        )
+
+                    console.print(table)
+                else:
+                    console.print("[yellow]No work plans found.[/yellow]")
+
+        except httpx.HTTPError as e:
+            console.print(f"[red]HTTP Error: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+
+
+async def _show_workplan(plan_id: str, json_output: bool):
+    """Async implementation of work plan display."""
+    try:
+        work_plans_dir = Path("~/.ytarchive/data/work_plans").expanduser()
+        plan_file = work_plans_dir / f"{plan_id}_plan.json"
+
+        if not plan_file.exists():
+            console.print(f"[red]Work plan '{plan_id}' not found.[/red]")
+            return
+
+        with open(plan_file) as f:
+            plan_data = json.load(f)
+
+        if json_output:
+            console.print(json.dumps(plan_data, indent=2))
+        else:
+            # Display work plan details
+            panel = Panel(
+                f"Plan ID: {plan_data.get('plan_id', plan_id)}\n"
+                f"Created: {plan_data.get('created_at', 'Unknown')}\n"
+                f"Total Videos: {plan_data.get('total_videos', 0)}\n"
+                f"Unavailable: {plan_data.get('unavailable_count', 0)}\n"
+                f"Failed: {plan_data.get('failed_count', 0)}\n"
+                f"Notes: {plan_data.get('notes', 'No notes')}",
+                title=f"Work Plan: {plan_id}",
+                border_style="blue",
+            )
+            console.print(panel)
+
+            # Show unavailable videos
+            if plan_data.get("unavailable_videos"):
+                console.print("\n[yellow]Unavailable Videos:[/yellow]")
+                unavailable_table = Table()
+                unavailable_table.add_column("Video ID", style="cyan")
+                unavailable_table.add_column("Title", style="white")
+                unavailable_table.add_column("Reason", style="yellow")
+                unavailable_table.add_column("Detected At", style="green")
+
+                for video in plan_data["unavailable_videos"]:
+                    unavailable_table.add_row(
+                        video.get("video_id", "N/A"),
+                        video.get("title", "N/A"),
+                        video.get("reason", "N/A"),
+                        video.get("detected_at", "N/A"),
+                    )
+                console.print(unavailable_table)
+
+            # Show failed downloads
+            if plan_data.get("failed_downloads"):
+                console.print("\n[red]Failed Downloads:[/red]")
+                failed_table = Table()
+                failed_table.add_column("Video ID", style="cyan")
+                failed_table.add_column("Title", style="white")
+                failed_table.add_column("Attempts", justify="right", style="red")
+                failed_table.add_column("Last Attempt", style="green")
+
+                for video in plan_data["failed_downloads"]:
+                    failed_table.add_row(
+                        video.get("video_id", "N/A"),
+                        video.get("title", "N/A"),
+                        str(video.get("attempts", 0)),
+                        video.get("last_attempt", "N/A"),
+                    )
+                console.print(failed_table)
+
+    except FileNotFoundError:
+        console.print(f"[red]Work plan '{plan_id}' not found.[/red]")
+    except json.JSONDecodeError:
+        console.print(f"[red]Invalid JSON in work plan file '{plan_id}'.[/red]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+
+
+async def _create_workplan(
+    unavailable_videos_file: Optional[str], failed_downloads_file: Optional[str]
+):
+    """Async implementation of work plan creation."""
+    async with YTArchiveAPI() as api:
+        try:
+            unavailable_videos = []
+            failed_downloads = []
+
+            # Load unavailable videos data
+            if unavailable_videos_file:
+                with open(unavailable_videos_file) as f:
+                    unavailable_data = json.load(f)
+                    if isinstance(unavailable_data, list):
+                        unavailable_videos = unavailable_data
+                    elif (
+                        isinstance(unavailable_data, dict)
+                        and "unavailable_videos" in unavailable_data
+                    ):
+                        unavailable_videos = unavailable_data["unavailable_videos"]
+
+            # Load failed downloads data
+            if failed_downloads_file:
+                with open(failed_downloads_file) as f:
+                    failed_data = json.load(f)
+                    if isinstance(failed_data, list):
+                        failed_downloads = failed_data
+                    elif (
+                        isinstance(failed_data, dict)
+                        and "failed_downloads" in failed_data
+                    ):
+                        failed_downloads = failed_data["failed_downloads"]
+
+            if not unavailable_videos and not failed_downloads:
+                console.print(
+                    "[yellow]No unavailable videos or failed downloads provided. Please specify at least one JSON file.[/yellow]"
+                )
+                return
+
+            # Create work plan via Storage Service API
+            payload = {
+                "unavailable_videos": unavailable_videos,
+                "failed_downloads": failed_downloads,
+            }
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Creating work plan...", total=None)
+
+                response = await api.client.post(
+                    f"{SERVICES['storage']}/api/v1/storage/work-plan", json=payload
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                progress.remove_task(task)
+
+            if result.get("success"):
+                data = result.get("data", {})
+                console.print("[green]Work plan created successfully![/green]")
+                console.print(f"Plan ID: {data.get('plan_id')}")
+                console.print(f"Path: {data.get('path')}")
+                console.print(f"Total Videos: {data.get('total_videos')}")
+                console.print(f"Unavailable: {data.get('unavailable_count')}")
+                console.print(f"Failed: {data.get('failed_count')}")
+            else:
+                console.print(
+                    f"[red]Failed to create work plan: {result.get('error', 'Unknown error')}[/red]"
+                )
+
+        except FileNotFoundError as e:
+            console.print(f"[red]File not found: {e}[/red]")
+        except json.JSONDecodeError as e:
+            console.print(f"[red]Invalid JSON format: {e}[/red]")
         except httpx.HTTPError as e:
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
