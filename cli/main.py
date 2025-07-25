@@ -489,17 +489,26 @@ def show(plan_id: str, json_output: bool) -> None:
 @workplan.command()
 @click.option(
     "--unavailable-videos",
+    "unavailable_videos_file",
     help="JSON file containing unavailable videos data",
     type=click.Path(exists=True),
 )
 @click.option(
     "--failed-downloads",
+    "failed_downloads_file",
     help="JSON file containing failed downloads data",
     type=click.Path(exists=True),
 )
-def create(unavailable_videos: Optional[str], failed_downloads: Optional[str]) -> None:
+def create(
+    unavailable_videos_file: Optional[str], failed_downloads_file: Optional[str]
+) -> None:
     """Create a new work plan from failed/unavailable videos."""
-    asyncio.run(_create_workplan(unavailable_videos, failed_downloads))
+    asyncio.run(
+        _create_workplan(
+            unavailable_videos_file=unavailable_videos_file,
+            failed_downloads_file=failed_downloads_file,
+        )
+    )
 
 
 async def _view_logs(

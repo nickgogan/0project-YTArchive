@@ -87,6 +87,7 @@ def mock_progress_response():
 class TestCLIBasics:
     """Test basic CLI functionality."""
 
+    @pytest.mark.service
     def test_cli_help(self, runner):
         """Test CLI help command."""
         result = runner.invoke(cli, ["--help"])
@@ -97,12 +98,14 @@ class TestCLIBasics:
         assert "status" in result.output
         assert "logs" in result.output
 
+    @pytest.mark.service
     def test_cli_version(self, runner):
         """Test CLI version command."""
         result = runner.invoke(cli, ["--version"])
         assert result.exit_code == 0
         assert "0.1.0" in result.output
 
+    @pytest.mark.service
     def test_download_help(self, runner):
         """Test download command help."""
         result = runner.invoke(cli, ["download", "--help"])
@@ -112,6 +115,7 @@ class TestCLIBasics:
         assert "--output" in result.output
         assert "--metadata-only" in result.output
 
+    @pytest.mark.service
     def test_metadata_help(self, runner):
         """Test metadata command help."""
         result = runner.invoke(cli, ["metadata", "--help"])
@@ -119,6 +123,7 @@ class TestCLIBasics:
         assert "Fetch and display metadata" in result.output
         assert "--json-output" in result.output
 
+    @pytest.mark.service
     def test_status_help(self, runner):
         """Test status command help."""
         result = runner.invoke(cli, ["status", "--help"])
@@ -126,6 +131,7 @@ class TestCLIBasics:
         assert "Check the status of a job" in result.output
         assert "--watch" in result.output
 
+    @pytest.mark.service
     def test_logs_help(self, runner):
         """Test logs command help."""
         result = runner.invoke(cli, ["logs", "--help"])
@@ -139,6 +145,7 @@ class TestDownloadCommand:
     """Test download command functionality."""
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_download_metadata_only(self, mock_api_class, runner, mock_api_response):
         """Test download with metadata-only flag."""
         # Setup mock
@@ -160,6 +167,7 @@ class TestDownloadCommand:
         assert not mock_api.start_download.called
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_download_video_exists(self, mock_api_class, runner):
         """Test download when video already exists."""
         # Setup mock
@@ -180,6 +188,7 @@ class TestDownloadCommand:
         assert not mock_api.get_video_metadata.called
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_download_with_quality(
         self,
         mock_api_class,
@@ -212,6 +221,7 @@ class TestDownloadCommand:
         assert call_args[0][1] == "720p"  # quality parameter
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_download_api_error(self, mock_api_class, runner):
         """Test download with API error."""
         # Setup mock
@@ -239,6 +249,7 @@ class TestMetadataCommand:
     """Test metadata command functionality."""
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_metadata_success(self, mock_api_class, runner, mock_api_response):
         """Test successful metadata retrieval."""
         # Setup mock
@@ -256,6 +267,7 @@ class TestMetadataCommand:
         assert mock_api.get_video_metadata.called
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_metadata_json_output(self, mock_api_class, runner, mock_api_response):
         """Test metadata with JSON output."""
         # Setup mock
@@ -281,6 +293,7 @@ class TestMetadataCommand:
         assert json_output["channel_title"] == "Test Channel"
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_metadata_api_error(self, mock_api_class, runner):
         """Test metadata with API error."""
         # Setup mock
@@ -303,6 +316,7 @@ class TestStatusCommand:
     """Test status command functionality."""
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_status_success(self, mock_api_class, runner, mock_job_response):
         """Test successful job status retrieval."""
         # Setup mock
@@ -321,6 +335,7 @@ class TestStatusCommand:
         assert mock_api.get_job.called
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_status_job_not_found(self, mock_api_class, runner):
         """Test status for non-existent job."""
         # Setup mock
@@ -336,6 +351,7 @@ class TestStatusCommand:
         assert "Job not found" in result.output
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_status_with_error(self, mock_api_class, runner):
         """Test status display with job error."""
         # Setup mock
@@ -364,6 +380,7 @@ class TestLogsCommand:
     """Test logs command functionality."""
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_logs_success(self, mock_api_class, runner):
         """Test successful log retrieval."""
         # Setup mock
@@ -398,6 +415,7 @@ class TestLogsCommand:
         assert mock_api.get_logs.called
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_logs_with_filters(self, mock_api_class, runner):
         """Test logs with service and level filters."""
         # Setup mock
@@ -418,6 +436,7 @@ class TestLogsCommand:
         assert call_args[0][1] == "ERROR"  # level
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_logs_api_error(self, mock_api_class, runner):
         """Test logs with API error."""
         # Setup mock
@@ -439,6 +458,7 @@ class TestLogsCommand:
 class TestUtilityFunctions:
     """Test utility functions."""
 
+    @pytest.mark.unit
     def test_format_duration(self):
         """Test duration formatting function."""
         from cli.main import format_duration
@@ -449,6 +469,7 @@ class TestUtilityFunctions:
         assert format_duration(3661) == "1h 1m 1s"
         assert format_duration(7200) == "2h 0m 0s"
 
+    @pytest.mark.unit
     def test_format_file_size(self):
         """Test file size formatting function."""
         from cli.main import format_file_size
@@ -464,6 +485,7 @@ class TestAPIClient:
     """Test YTArchiveAPI client."""
 
     @patch("httpx.AsyncClient")
+    @pytest.mark.unit
     def test_api_client_initialization(self, mock_client):
         """Test API client initialization."""
         from cli.main import YTArchiveAPI
@@ -471,6 +493,7 @@ class TestAPIClient:
         api = YTArchiveAPI()
         assert api.client is not None
 
+    @pytest.mark.unit
     def test_service_urls(self):
         """Test service URL configuration."""
         from cli.main import SERVICES
@@ -484,26 +507,31 @@ class TestAPIClient:
 class TestInputValidation:
     """Test input validation and error handling."""
 
+    @pytest.mark.service
     def test_download_missing_video_id(self, runner):
         """Test download command without video ID."""
         result = runner.invoke(cli, ["download"])
         assert result.exit_code != 0  # Should fail with missing argument
 
+    @pytest.mark.service
     def test_metadata_missing_video_id(self, runner):
         """Test metadata command without video ID."""
         result = runner.invoke(cli, ["metadata"])
         assert result.exit_code != 0  # Should fail with missing argument
 
+    @pytest.mark.service
     def test_status_missing_job_id(self, runner):
         """Test status command without job ID."""
         result = runner.invoke(cli, ["status"])
         assert result.exit_code != 0  # Should fail with missing argument
 
+    @pytest.mark.service
     def test_download_invalid_quality(self, runner):
         """Test download with invalid quality option."""
         result = runner.invoke(cli, ["download", "dQw4w9WgXcQ", "--quality", "invalid"])
         assert result.exit_code != 0  # Should fail with invalid choice
 
+    @pytest.mark.service
     def test_logs_invalid_level(self, runner):
         """Test logs with invalid level option."""
         result = runner.invoke(cli, ["logs", "--level", "INVALID"])

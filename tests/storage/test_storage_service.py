@@ -38,6 +38,7 @@ def storage_service(temp_storage_dir):
     return service
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_save_metadata(storage_service: StorageService):
     """Test saving video metadata."""
@@ -74,6 +75,7 @@ async def test_save_metadata(storage_service: StorageService):
         assert saved_data["storage_info"]["video_id"] == "test123"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_save_video_info(storage_service: StorageService):
     """Test saving video file information."""
@@ -112,6 +114,7 @@ async def test_save_video_info(storage_service: StorageService):
         assert saved_data["file_size"] == video_data["file_size"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_check_video_exists_not_found(storage_service: StorageService):
     """Test checking for video that doesn't exist."""
@@ -128,6 +131,7 @@ async def test_check_video_exists_not_found(storage_service: StorageService):
         assert result["data"]["has_captions"] == []
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_check_video_exists_with_metadata(storage_service: StorageService):
     """Test checking for video with metadata."""
@@ -150,6 +154,7 @@ async def test_check_video_exists_with_metadata(storage_service: StorageService)
         assert "metadata" in result["data"]["paths"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_check_video_exists_with_video_files(storage_service: StorageService):
     """Test checking for video with all files present."""
@@ -182,6 +187,7 @@ async def test_check_video_exists_with_video_files(storage_service: StorageServi
         assert "caption_en" in result["data"]["paths"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_stored_metadata_not_found(storage_service: StorageService):
     """Test getting metadata for non-existent video."""
@@ -190,6 +196,7 @@ async def test_get_stored_metadata_not_found(storage_service: StorageService):
         assert response.status_code == 404
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_stored_metadata_success(storage_service: StorageService):
     """Test getting stored metadata successfully."""
@@ -215,6 +222,7 @@ async def test_get_stored_metadata_success(storage_service: StorageService):
         assert "storage_info" in result["data"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_generate_work_plan(storage_service: StorageService):
     """Test generating work plan."""
@@ -254,6 +262,7 @@ async def test_generate_work_plan(storage_service: StorageService):
         assert len(plan_files) >= 1
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_storage_stats_empty(storage_service: StorageService):
     """Test getting storage stats for empty storage."""
@@ -272,6 +281,7 @@ async def test_get_storage_stats_empty(storage_service: StorageService):
         assert "disk_usage" in result["data"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_storage_stats_with_content(storage_service: StorageService):
     """Test getting storage stats with some content."""
@@ -306,6 +316,7 @@ async def test_get_storage_stats_with_content(storage_service: StorageService):
         assert result["data"]["total_size_human"] != "0.0 B"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_health_check(storage_service: StorageService):
     """Test the health check endpoint."""
@@ -318,6 +329,7 @@ async def test_health_check(storage_service: StorageService):
         assert result["status"] == "ok"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_error_handling_invalid_json(storage_service: StorageService):
     """Test error handling with invalid JSON in request."""

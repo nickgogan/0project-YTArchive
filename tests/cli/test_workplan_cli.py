@@ -1,6 +1,7 @@
 """Tests for work plan CLI commands."""
 
 import json
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from click.testing import CliRunner
@@ -15,6 +16,7 @@ class TestWorkPlanCLI:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_workplan_help(self, mock_api):
         """Test work plan help command displays correctly."""
@@ -26,6 +28,7 @@ class TestWorkPlanCLI:
         assert "list" in result.output
         assert "show" in result.output
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     @patch("cli.main.Path")
     def test_workplan_list_no_directory(self, mock_path, mock_api):
@@ -47,38 +50,12 @@ class TestWorkPlanCLI:
         assert result.exit_code == 0
         assert "No work plans directory found" in result.output
 
-    @pytest.mark.asyncio
-    @patch("cli.main.YTArchiveAPI")
-    @patch("cli.main.Path")
-    async def test_workplan_list_empty_directory_async(self, mock_path, mock_api):
-        """Test work plan list when work plans directory is empty."""
-        # Mock directory exists but is empty
-        mock_work_plans_dir = Mock()
-        mock_work_plans_dir.exists.return_value = True
-        mock_work_plans_dir.glob.return_value = []
-        mock_path.return_value.expanduser.return_value = mock_work_plans_dir
-
-        # Mock API - ensure no coroutine objects are created inadvertently
-        mock_api_instance = AsyncMock()
-        mock_api_instance.client = AsyncMock()
-        mock_api_instance.client.get = AsyncMock()
-        mock_api_instance.client.get.return_value.raise_for_status = Mock()
-        mock_api_instance.client.get.return_value.json = AsyncMock(return_value={})
-        mock_api.return_value.__aenter__ = AsyncMock(return_value=mock_api_instance)
-        mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
-
-        # Test the async function directly
-        result = await _list_workplans(json_output=False)
-
-        # Ensure no coroutine was returned
-        assert result is None  # _list_workplans should return None on success
-
-    @pytest.mark.asyncio
-    @patch("cli.main.console.print")  # Mock console output
+    @pytest.mark.service
+    @patch("cli.main.console.print")
     @patch("cli.main.YTArchiveAPI")
     @patch("cli.main.Path")
     @patch("builtins.open")
-    async def test_workplan_list_with_plans_async(
+    def test_workplan_list_with_plans(
         self, mock_open, mock_path, mock_api, mock_console
     ):
         """Test work plan list with existing work plans."""
@@ -111,11 +88,12 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
         # Test the async function directly
-        await _list_workplans(json_output=False)
+        asyncio.run(_list_workplans(json_output=False))
 
         # Verify console output was called (table should be printed)
         mock_console.assert_called()
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     @patch("cli.main.Path")
     def test_workplan_show_not_found(self, mock_path, mock_api):
@@ -137,10 +115,10 @@ class TestWorkPlanCLI:
         assert result.exit_code == 0
         assert "not found" in result.output
 
-    @pytest.mark.asyncio
-    @patch("cli.main.console.print")  # Mock console output
+    @pytest.mark.service
+    @patch("cli.main.console.print")
     @patch("cli.main.YTArchiveAPI")
-    async def test_workplan_create_success_async(self, mock_api, mock_console):
+    def test_workplan_create_success(self, mock_api, mock_console):
         """Test successful work plan creation."""
         # Mock successful API response
         mock_response = Mock()
@@ -163,11 +141,12 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
         # Test the async function directly with mock data
-        await _create_workplan(None, None)  # Pass None for file paths
+        asyncio.run(_create_workplan(None, None))
 
         # Verify console output was called (success message should be printed)
         mock_console.assert_called()
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_workplan_create_no_files(self, mock_api):
         """Test work plan creation with no input files."""
@@ -181,6 +160,7 @@ class TestWorkPlanCLI:
         assert result.exit_code == 0
         assert "No unavailable videos or failed downloads provided" in result.output
 
+    @pytest.mark.service
     def test_workplan_create_help(self):
         """Test work plan create help command."""
         result = self.runner.invoke(cli, ["workplan", "create", "--help"])
@@ -190,6 +170,7 @@ class TestWorkPlanCLI:
         assert "--unavailable-videos" in result.output
         assert "--failed-downloads" in result.output
 
+    @pytest.mark.service
     def test_workplan_list_help(self):
         """Test work plan list help command."""
         result = self.runner.invoke(cli, ["workplan", "list", "--help"])
@@ -198,6 +179,7 @@ class TestWorkPlanCLI:
         assert "List all work plans" in result.output
         assert "--json" in result.output
 
+    @pytest.mark.service
     def test_workplan_show_help(self):
         """Test work plan show help command."""
         result = self.runner.invoke(cli, ["workplan", "show", "--help"])

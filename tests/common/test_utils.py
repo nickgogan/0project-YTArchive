@@ -7,6 +7,7 @@ import pytest
 from services.common.utils import CircuitBreaker, retry_with_backoff
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_retry_with_backoff():
     """Test that the retry_with_backoff decorator works as expected."""
@@ -22,6 +23,7 @@ async def test_retry_with_backoff():
     assert mock_func.call_count == 3
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_circuit_breaker():
     """Test the CircuitBreaker class state transitions."""

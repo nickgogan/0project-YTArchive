@@ -73,6 +73,7 @@ async def client(download_service):
 class TestDownloadService:
     """Test cases for DownloadService."""
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_health_check(self, client: AsyncClient):
         """Test health check endpoint."""
@@ -81,6 +82,7 @@ class TestDownloadService:
         data = response.json()
         assert data["status"] == "ok"
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_start_video_download_success(
         self, client: AsyncClient, temp_download_dir: str
@@ -111,6 +113,7 @@ class TestDownloadService:
             # After integration, path comes from Storage service (mocked to use default path)
             assert "YTArchive/videos" in data["data"]["output_path"]
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_start_download_invalid_quality(
         self, client: AsyncClient, temp_download_dir: str
@@ -126,6 +129,7 @@ class TestDownloadService:
         assert response.status_code == 400
         assert "Invalid quality" in response.json()["detail"]
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_start_download_default_values(
         self, client: AsyncClient, temp_download_dir: str
@@ -143,6 +147,7 @@ class TestDownloadService:
         assert data["success"] is True
         # Should use default quality (1080p)
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_download_progress_success(
         self,
@@ -167,6 +172,7 @@ class TestDownloadService:
         assert data["data"]["status"] == "pending"
         assert data["data"]["progress_percent"] == 0.0
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_progress_nonexistent_task(self, client: AsyncClient):
         """Test getting progress for non-existent task."""
@@ -175,6 +181,7 @@ class TestDownloadService:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_cancel_download_success(
         self,
@@ -198,6 +205,7 @@ class TestDownloadService:
         assert data["data"]["status"] == "cancelled"
         assert "cancelled successfully" in data["data"]["message"]
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_cancel_nonexistent_task(self, client: AsyncClient):
         """Test cancelling non-existent task."""
@@ -206,6 +214,7 @@ class TestDownloadService:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_cancel_completed_task(
         self,
@@ -225,6 +234,7 @@ class TestDownloadService:
         assert response.status_code == 400
         assert "Cannot cancel" in response.json()["detail"]
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     @patch("services.download.main.DownloadService._extract_info")
     async def test_get_video_formats_success(
@@ -251,6 +261,7 @@ class TestDownloadService:
         assert formats[1]["format_id"] == "22"
         assert formats[1]["resolution"] == "720p"
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     @patch("services.download.main.DownloadService._extract_info")
     async def test_get_formats_video_not_found(
@@ -263,6 +274,7 @@ class TestDownloadService:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_quality_mapping(self, download_service: DownloadService):
         """Test quality format mapping."""
@@ -272,6 +284,7 @@ class TestDownloadService:
             assert isinstance(download_service.quality_map[quality], str)
             assert len(download_service.quality_map[quality]) > 0
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_create_download_task(
         self, download_service: DownloadService, temp_download_dir: str
@@ -295,6 +308,7 @@ class TestDownloadService:
         assert task.task_id in download_service.task_progress
         assert Path(task.output_path).exists()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_create_task_invalid_quality(
         self, download_service: DownloadService, temp_download_dir: str
@@ -309,6 +323,7 @@ class TestDownloadService:
         with pytest.raises(Exception):  # Should raise HTTPException
             await download_service._create_download_task(request)
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     @patch("services.download.main.DownloadService._run_ytdlp")
     async def test_download_video_mock(
@@ -334,6 +349,7 @@ class TestDownloadService:
         call_args = mock_run_ytdlp.call_args
         assert "https://www.youtube.com/watch?v=dQw4w9WgXcQ" in call_args[0]
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_progress_tracking(
         self, download_service: DownloadService, temp_download_dir: str
@@ -357,12 +373,14 @@ class TestDownloadService:
         assert progress.speed == 1024
         assert progress.eta == 50
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_concurrent_download_limit(self, download_service: DownloadService):
         """Test concurrent download limitation."""
         assert download_service.max_concurrent_downloads == 3
         assert download_service.download_semaphore._value == 3
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_output_directory_creation(self, download_service: DownloadService):
         """Test that output directories are created."""

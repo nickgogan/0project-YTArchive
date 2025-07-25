@@ -96,6 +96,7 @@ async def client(metadata_service):
 class TestMetadataService:
     """Test cases for MetadataService."""
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_health_check(self, client: AsyncClient):
         """Test health check endpoint."""
@@ -104,6 +105,7 @@ class TestMetadataService:
         data = response.json()
         assert data["status"] == "ok"
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_video_metadata_success(
         self,
@@ -126,6 +128,7 @@ class TestMetadataService:
         assert data["data"]["duration"] == 213  # 3m33s = 213 seconds
         assert data["data"]["channel_title"] == "Rick Astley"
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_video_metadata_not_found(
         self, client: AsyncClient, metadata_service: MetadataService
@@ -139,6 +142,7 @@ class TestMetadataService:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_video_metadata_quota_exceeded(
         self, client: AsyncClient, metadata_service: MetadataService
@@ -153,6 +157,7 @@ class TestMetadataService:
         assert response.status_code == 429
         assert "quota exceeded" in response.json()["detail"].lower()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_video_metadata_api_error(
         self, client: AsyncClient, metadata_service: MetadataService
@@ -168,6 +173,7 @@ class TestMetadataService:
         response = await client.get("/api/v1/metadata/video/dQw4w9WgXcQ")
         assert response.status_code == 403
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_playlist_metadata_success(
         self,
@@ -200,6 +206,7 @@ class TestMetadataService:
         assert data["data"]["video_count"] == 2
         assert len(data["data"]["videos"]) == 2
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_playlist_metadata_not_found(
         self, client: AsyncClient, metadata_service: MetadataService
@@ -212,6 +219,7 @@ class TestMetadataService:
         response = await client.get("/api/v1/metadata/playlist/nonexistent")
         assert response.status_code == 404
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_batch_fetch_metadata_success(
         self,
@@ -238,6 +246,7 @@ class TestMetadataService:
         assert len(data["data"]["metadata"]) == 2
         assert len(data["data"]["failed"]) == 0
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_batch_fetch_metadata_partial_failure(
         self,
@@ -262,6 +271,7 @@ class TestMetadataService:
         assert len(data["data"]["failed"]) == 1
         assert data["data"]["failed"][0]["video_id"] == "nonexistent"
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_batch_fetch_invalid_request(self, client: AsyncClient):
         """Test batch fetch with invalid request data."""
@@ -275,6 +285,7 @@ class TestMetadataService:
         response = await client.post("/api/v1/metadata/batch", json=large_request)
         assert response.status_code == 422
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_get_quota_status(
         self, client: AsyncClient, metadata_service: MetadataService
@@ -292,6 +303,7 @@ class TestMetadataService:
         assert data["data"]["quota_used"] == 2500
         assert data["data"]["quota_remaining"] == 7500
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_caching_video_metadata(
         self,
@@ -352,6 +364,7 @@ class TestMetadataService:
         metadata_service._use_quota(5)
         assert metadata_service.quota_used == initial_used + 5
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_cache_expiration(self, metadata_service: MetadataService):
         """Test cache entry expiration."""
@@ -365,6 +378,7 @@ class TestMetadataService:
         await asyncio.sleep(1.1)
         assert entry.is_expired()
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_private_video_handling(
         self,

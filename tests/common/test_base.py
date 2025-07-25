@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_health_check(test_client):
     """Test that the health check endpoint returns a 200 OK response."""

@@ -25,6 +25,7 @@ async def logging_client(logging_service):
         yield client
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_log_endpoint(logging_service: LoggingService):
     """Test that the /log endpoint correctly stores log messages."""
@@ -45,6 +46,7 @@ async def test_log_endpoint(logging_service: LoggingService):
     assert "timestamp" in result
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_log_file_creation(logging_service: LoggingService):
     """Test that log files are created in the correct directories."""
@@ -77,6 +79,7 @@ async def test_log_file_creation(logging_service: LoggingService):
         assert log_entry["message"] == "Test message"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_logs_endpoint(logging_service: LoggingService):
     """Test that the GET /logs endpoint retrieves logs with filtering."""

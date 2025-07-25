@@ -75,6 +75,7 @@ class TestServiceCoordination:
     """Test coordination between different services."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_job_creation_and_storage_interaction(
         self, jobs_service, storage_service, temp_storage_dir
     ):
@@ -123,6 +124,7 @@ class TestServiceCoordination:
         print("✅ Job creation and storage interaction test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_download_task_management(self, download_service, temp_storage_dir):
         """Test Download service task management without external dependencies."""
 
@@ -152,6 +154,7 @@ class TestServiceCoordination:
         print("✅ Download task management test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_concurrent_job_processing(self, jobs_service):
         """Test Jobs service can handle multiple concurrent jobs."""
 
@@ -184,6 +187,7 @@ class TestServiceCoordination:
         print("✅ Concurrent job processing test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_storage_batch_operations(self, storage_service):
         """Test Storage service can handle batch operations efficiently."""
 
@@ -223,6 +227,7 @@ class TestServiceCoordination:
         print("✅ Storage batch operations test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_error_handling_integration(self, jobs_service, storage_service):
         """Test error handling across service boundaries."""
 
@@ -256,6 +261,7 @@ class TestServiceCoordination:
         print("✅ Error handling integration test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_job_status_lifecycle(self, jobs_service):
         """Test complete job status lifecycle management."""
 
@@ -292,6 +298,7 @@ class TestPerformanceCharacteristics:
     """Test performance characteristics of service coordination."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_service_response_times(self, jobs_service, storage_service):
         """Test that service operations complete within reasonable time limits."""
 
@@ -321,6 +328,7 @@ class TestPerformanceCharacteristics:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_concurrent_operation_performance(self, jobs_service):
         """Test performance under concurrent load."""
 
@@ -353,6 +361,7 @@ class TestDataConsistency:
     """Test data consistency across service operations."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_job_data_persistence(self, jobs_service):
         """Test that job data persists correctly across operations."""
 
@@ -387,6 +396,7 @@ class TestDataConsistency:
         print("✅ Job data persistence test passed")
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_storage_data_integrity(self, storage_service):
         """Test that storage operations maintain data integrity."""
 

@@ -44,6 +44,7 @@ def jobs_service():
     return JobsService("TestJobsService", settings)
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_create_job(jobs_service: JobsService):
     """Test creating a new job."""
@@ -67,6 +68,7 @@ async def test_create_job(jobs_service: JobsService):
         assert "updated_at" in result
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_job(jobs_service: JobsService):
     """Test retrieving a job by ID."""
@@ -91,6 +93,7 @@ async def test_get_job(jobs_service: JobsService):
         assert result["urls"] == job_data["urls"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_get_nonexistent_job(jobs_service: JobsService):
     """Test retrieving a job that doesn't exist."""
@@ -99,6 +102,7 @@ async def test_get_nonexistent_job(jobs_service: JobsService):
         assert response.status_code == 404
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_list_jobs(jobs_service: JobsService):
     """Test listing jobs."""
@@ -128,6 +132,7 @@ async def test_list_jobs(jobs_service: JobsService):
         assert result["count"] >= 2
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_list_jobs_with_status_filter(jobs_service: JobsService):
     """Test listing jobs with status filtering."""
@@ -152,6 +157,7 @@ async def test_list_jobs_with_status_filter(jobs_service: JobsService):
             assert job["status"] == "PENDING"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_job_file_persistence(jobs_service: JobsService):
     """Test that jobs are properly persisted to files."""
@@ -179,6 +185,7 @@ async def test_job_file_persistence(jobs_service: JobsService):
         assert saved_data["options"] == job_data["options"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_register_service(jobs_service: JobsService):
     """Test registering a service in the registry."""
@@ -207,6 +214,7 @@ async def test_register_service(jobs_service: JobsService):
         assert service["is_healthy"] is True
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_list_services(jobs_service: JobsService):
     """Test listing registered services."""
@@ -235,6 +243,7 @@ async def test_list_services(jobs_service: JobsService):
         assert "list-test-service" in service_names
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_unregister_service(jobs_service: JobsService):
     """Test unregistering a service from the registry."""
@@ -263,6 +272,7 @@ async def test_unregister_service(jobs_service: JobsService):
         assert "unregister-test-service" not in service_names
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_unregister_nonexistent_service(jobs_service: JobsService):
     """Test unregistering a service that doesn't exist."""
@@ -271,6 +281,7 @@ async def test_unregister_nonexistent_service(jobs_service: JobsService):
         assert response.status_code == 404
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_service_registry_file_persistence(jobs_service: JobsService):
     """Test that services are properly persisted to files."""
@@ -301,6 +312,7 @@ async def test_service_registry_file_persistence(jobs_service: JobsService):
         assert saved_data["tags"] == ["persistence", "test"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_execute_job(jobs_service: JobsService):
     """Test executing a job."""
@@ -337,6 +349,7 @@ async def test_execute_job(jobs_service: JobsService):
             assert "updated_at" in result
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_execute_nonexistent_job(jobs_service: JobsService):
     """Test executing a job that doesn't exist."""
@@ -345,6 +358,7 @@ async def test_execute_nonexistent_job(jobs_service: JobsService):
         assert response.status_code == 404
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_job_status_updates(jobs_service: JobsService):
     """Test that job status is properly updated during execution."""
@@ -378,6 +392,7 @@ async def test_job_status_updates(jobs_service: JobsService):
             assert final_response.json()["status"] == "COMPLETED"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_execute_already_completed_job(jobs_service: JobsService):
     """Test executing a job that's already completed."""
@@ -413,6 +428,7 @@ async def test_execute_already_completed_job(jobs_service: JobsService):
             assert second_execute.json()["status"] == "COMPLETED"
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_job_failure_adds_to_work_plan(jobs_service: JobsService):
     """Test that failed jobs are automatically added to work plans."""
@@ -466,6 +482,7 @@ async def test_job_failure_adds_to_work_plan(jobs_service: JobsService):
             assert payload["failed_downloads"][0]["errors"] == ["Test error"]
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_video_id_extraction_from_urls(jobs_service: JobsService):
     """Test video ID extraction from different YouTube URL formats."""
@@ -529,6 +546,7 @@ async def test_video_id_extraction_from_urls(jobs_service: JobsService):
             assert "xyz789" in video_ids
 
 
+@pytest.mark.service
 @pytest.mark.asyncio
 async def test_work_plan_integration_error_handling(jobs_service: JobsService):
     """Test error handling when work plan API fails."""
