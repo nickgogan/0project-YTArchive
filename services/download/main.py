@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import httpx
 import yt_dlp
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
@@ -36,6 +37,7 @@ class DownloadRequest(BaseModel):
     include_captions: bool = True
     caption_languages: List[str] = Field(default_factory=lambda: ["en"])
     resume: bool = True  # Resume partial downloads
+    job_id: Optional[str] = None  # Associated job ID for coordination
 
 
 class DownloadTask(BaseModel):
@@ -50,6 +52,8 @@ class DownloadTask(BaseModel):
     output_path: str
     file_path: Optional[str] = None
     error: Optional[str] = None
+    job_id: Optional[str] = None  # Associated job ID for coordination
+    quality: str = "1080p"  # Track quality for storage notification
 
 
 class DownloadProgress(BaseModel):
@@ -188,8 +192,9 @@ class DownloadService(BaseService):
                 detail=f"Invalid quality: {request.quality}. Available: {list(self.quality_map.keys())}",
             )
 
-        # Create output directory
-        output_path = Path(request.output_path).expanduser()
+        # Get storage path from Storage service
+        storage_path = await self._get_storage_path(request.video_id, request.quality)
+        output_path = Path(storage_path).expanduser()
         output_path.mkdir(parents=True, exist_ok=True)
 
         task = DownloadTask(
@@ -198,6 +203,8 @@ class DownloadService(BaseService):
             status=DownloadStatus.PENDING,
             created_at=datetime.now(timezone.utc),
             output_path=str(output_path),
+            job_id=request.job_id,
+            quality=request.quality,
         )
 
         # Initialize progress tracking
@@ -223,6 +230,9 @@ class DownloadService(BaseService):
                 task.started_at = datetime.now(timezone.utc)
                 self.task_progress[task.task_id].status = DownloadStatus.DOWNLOADING
 
+                # Report status to Jobs service
+                await self._report_job_status(task.job_id, "downloading")
+
                 # Perform the download
                 await self._download_video(task)
 
@@ -232,12 +242,29 @@ class DownloadService(BaseService):
                 self.task_progress[task.task_id].status = DownloadStatus.COMPLETED
                 self.task_progress[task.task_id].progress_percent = 100.0
 
+                # Notify Storage service of successful save
+                if task.file_path:
+                    file_size = 0
+                    try:
+                        file_size = Path(task.file_path).stat().st_size
+                    except Exception:
+                        pass
+                    await self._notify_storage_video_saved(
+                        task.video_id, task.file_path, file_size, task.quality
+                    )
+
+                # Report successful completion to Jobs service
+                await self._report_job_status(task.job_id, "completed")
+
             except Exception as e:
                 # Mark as failed
                 task.status = DownloadStatus.FAILED
                 task.error = str(e)
                 self.task_progress[task.task_id].status = DownloadStatus.FAILED
                 self.task_progress[task.task_id].error = str(e)
+
+                # Report failure to Jobs service
+                await self._report_job_status(task.job_id, "failed", str(e))
             finally:
                 # Clean up background task reference
                 self.background_tasks.pop(task.task_id, None)
@@ -397,6 +424,65 @@ class DownloadService(BaseService):
                 return ydl.extract_info(url, download=False)
         except Exception:
             return None
+
+    async def _get_storage_path(self, video_id: str, quality: str = "1080p") -> str:
+        """Get appropriate storage path from Storage service."""
+        try:
+            storage_url = f"http://localhost:8003/api/v1/storage/exists/{video_id}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(storage_url)
+                if response.status_code == 200:
+                    # Use the storage service's recommended path structure
+                    return str(Path.home() / "YTArchive" / "videos")
+                else:
+                    # Default path if storage service unavailable
+                    return str(Path.home() / "YTArchive" / "videos")
+        except Exception:
+            # Fallback to default path
+            return str(Path.home() / "YTArchive" / "videos")
+
+    async def _notify_storage_video_saved(
+        self, video_id: str, file_path: str, file_size: int, quality: str
+    ):
+        """Notify Storage service of successful video save."""
+        try:
+            storage_url = "http://localhost:8003/api/v1/storage/save/video"
+            payload = {
+                "video_id": video_id,
+                "file_path": file_path,
+                "file_size": file_size,
+                "format": "mp4",  # Extract from file extension if needed
+                "quality": quality,
+            }
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(storage_url, json=payload)
+                if response.status_code != 200:
+                    print(
+                        f"Warning: Could not notify Storage service: {response.status_code}"
+                    )
+        except Exception as e:
+            print(f"Warning: Failed to notify Storage service: {e}")
+
+    async def _report_job_status(
+        self, job_id: Optional[str], status: str, error_details: Optional[str] = None
+    ):
+        """Report download status back to Jobs service if job_id is provided."""
+        if not job_id:
+            return
+
+        try:
+            jobs_url = f"http://localhost:8000/api/v1/jobs/{job_id}/status"
+            payload = {"status": status, "error_details": error_details}
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.put(jobs_url, json=payload)
+                if response.status_code != 200:
+                    print(
+                        f"Warning: Could not report status to Jobs service: {response.status_code}"
+                    )
+        except Exception as e:
+            print(f"Warning: Failed to report status to Jobs service: {e}")
 
     async def cleanup_pending_tasks(self):
         """Clean up any pending background tasks. Useful for testing."""
