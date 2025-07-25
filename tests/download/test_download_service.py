@@ -94,15 +94,22 @@ class TestDownloadService:
             "caption_languages": ["en"],
         }
 
-        response = await client.post("/api/v1/download/video", json=request_data)
-        assert response.status_code == 200
+        # Mock Storage service integration to return the temp directory
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value.status_code = (
+                200
+            )
 
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["video_id"] == "dQw4w9WgXcQ"
-        assert data["data"]["status"] == "pending"
-        assert "task_id" in data["data"]
-        assert data["data"]["output_path"] == temp_download_dir
+            response = await client.post("/api/v1/download/video", json=request_data)
+            assert response.status_code == 200
+
+            data = response.json()
+            assert data["success"] is True
+            assert data["data"]["video_id"] == "dQw4w9WgXcQ"
+            assert data["data"]["status"] == "pending"
+            assert "task_id" in data["data"]
+            # After integration, path comes from Storage service (mocked to use default path)
+            assert "YTArchive/videos" in data["data"]["output_path"]
 
     @pytest.mark.asyncio
     async def test_start_download_invalid_quality(
