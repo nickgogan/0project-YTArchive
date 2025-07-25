@@ -1,5 +1,6 @@
 """Jobs Service for coordinating YouTube archiving tasks."""
 
+import asyncio
 import json
 import uuid
 from datetime import datetime, timezone
@@ -302,29 +303,207 @@ class JobsService(BaseService):
         return JobResponse(**job_data)
 
     async def _process_job(self, job: JobResponse):
-        """Process a job based on its type. This is a basic implementation."""
-        import asyncio
-
+        """Process a job by coordinating with appropriate services."""
         if job.job_type == JobType.VIDEO_DOWNLOAD:
-            # Simulate video download processing
-            print(f"Processing video download job for URLs: {job.urls}")
-            await asyncio.sleep(1)  # Simulate work
-            print(f"Video download completed for job {job.job_id}")
-
+            await self._process_video_download(job)
         elif job.job_type == JobType.PLAYLIST_DOWNLOAD:
-            # Simulate playlist download processing
-            print(f"Processing playlist download job for URLs: {job.urls}")
-            await asyncio.sleep(2)  # Simulate more work
-            print(f"Playlist download completed for job {job.job_id}")
-
+            await self._process_playlist_download(job)
         elif job.job_type == JobType.METADATA_ONLY:
-            # Simulate metadata extraction
-            print(f"Processing metadata extraction for URLs: {job.urls}")
-            await asyncio.sleep(0.5)  # Simulate quick work
-            print(f"Metadata extraction completed for job {job.job_id}")
-
+            await self._process_metadata_only(job)
         else:
             raise ValueError(f"Unknown job type: {job.job_type}")
+
+    async def _process_video_download(self, job: JobResponse):
+        """Process video download job by coordinating with Download and Storage services."""
+        for url in job.urls:
+            try:
+                # Extract video ID from URL
+                video_id = self._extract_video_id(url)
+                if not video_id:
+                    raise ValueError(f"Could not extract video ID from URL: {url}")
+
+                # Get Storage service path for the video
+                storage_path = await self._get_storage_path(video_id)
+
+                # Start download via Download service
+                download_result = await self._start_download(
+                    video_id, storage_path, job.options
+                )
+
+                # Monitor download progress and wait for completion
+                await self._monitor_download(download_result["task_id"])
+
+                # Notify Storage service of successful video save
+                await self._notify_storage_video_saved(video_id, storage_path)
+
+                print(f"Successfully downloaded video {video_id} for job {job.job_id}")
+
+            except Exception as e:
+                print(f"Failed to download video from {url} in job {job.job_id}: {e}")
+                raise  # Re-raise to mark job as failed
+
+    async def _process_playlist_download(self, job: JobResponse):
+        """Process playlist download job."""
+        # For now, process each URL as individual video download
+        # TODO: Add proper playlist expansion in future enhancement
+        await self._process_video_download(job)
+
+    async def _process_metadata_only(self, job: JobResponse):
+        """Process metadata-only job by fetching and storing metadata."""
+        for url in job.urls:
+            try:
+                video_id = self._extract_video_id(url)
+                if not video_id:
+                    raise ValueError(f"Could not extract video ID from URL: {url}")
+
+                # Fetch metadata via Metadata service
+                metadata = await self._fetch_metadata(video_id)
+
+                # Store metadata via Storage service
+                await self._store_metadata(video_id, metadata)
+
+                print(
+                    f"Successfully processed metadata for video {video_id} in job {job.job_id}"
+                )
+
+            except Exception as e:
+                print(f"Failed to process metadata for {url} in job {job.job_id}: {e}")
+                raise
+
+    def _extract_video_id(self, url: str) -> Optional[str]:
+        """Extract video ID from YouTube URL."""
+        if "youtube.com/watch?v=" in url:
+            return url.split("v=")[1].split("&")[0]
+        elif "youtu.be/" in url:
+            return url.split("/")[-1].split("?")[0]
+        return None
+
+    async def _get_storage_path(self, video_id: str) -> str:
+        """Get appropriate storage path from Storage service."""
+        try:
+            storage_url = "http://localhost:8003/api/v1/storage/exists/" + video_id
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(storage_url)
+                if response.status_code == 200:
+                    # Use the storage service's recommended path structure
+                    return str(Path.home() / "YTArchive" / "videos")
+                else:
+                    # Default path if storage service unavailable
+                    return str(Path.home() / "YTArchive" / "videos")
+        except Exception as e:
+            print(f"Warning: Could not contact Storage service for path: {e}")
+            return str(Path.home() / "YTArchive" / "videos")
+
+    async def _start_download(
+        self, video_id: str, output_path: str, options: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Start download via Download service."""
+        download_url = "http://localhost:8002/api/v1/download/video"
+        payload = {
+            "video_id": video_id,
+            "quality": options.get("quality", "1080p"),
+            "output_path": output_path,
+            "include_captions": options.get("include_captions", True),
+            "caption_languages": options.get("caption_languages", ["en"]),
+            "resume": options.get("resume", True),
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(download_url, json=payload)
+            if response.status_code == 200:
+                return response.json()["data"]
+            else:
+                raise Exception(
+                    f"Download service error: {response.status_code} - {response.text}"
+                )
+
+    async def _monitor_download(self, task_id: str, timeout_seconds: int = 3600):
+        """Monitor download progress until completion."""
+        import time
+
+        start_time = time.time()
+
+        while time.time() - start_time < timeout_seconds:
+            try:
+                progress_url = (
+                    f"http://localhost:8002/api/v1/download/progress/{task_id}"
+                )
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(progress_url)
+                    if response.status_code == 200:
+                        progress = response.json()["data"]
+                        status = progress["status"]
+
+                        if status == "completed":
+                            return  # Download successful
+                        elif status == "failed":
+                            error = progress.get("error", "Unknown download error")
+                            raise Exception(f"Download failed: {error}")
+                        elif status == "cancelled":
+                            raise Exception("Download was cancelled")
+
+                        # Still downloading, wait and check again
+                        await asyncio.sleep(5)
+                    else:
+                        raise Exception(
+                            f"Could not get download progress: {response.status_code}"
+                        )
+            except Exception as e:
+                if "Download failed" in str(e) or "cancelled" in str(e):
+                    raise
+                # For other errors, wait and retry
+                await asyncio.sleep(10)
+
+        raise Exception(f"Download timeout after {timeout_seconds} seconds")
+
+    async def _notify_storage_video_saved(self, video_id: str, file_path: str):
+        """Notify Storage service that video was successfully saved."""
+        try:
+            storage_url = "http://localhost:8003/api/v1/storage/save/video"
+            payload = {
+                "video_id": video_id,
+                "file_path": file_path,
+                "file_size": 0,  # Would be filled by Download service in real implementation
+                "format": "mp4",  # Default format
+                "quality": "1080p",  # Would be passed from job options
+            }
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(storage_url, json=payload)
+                if response.status_code == 200:
+                    print(f"Notified Storage service of video save: {video_id}")
+                else:
+                    print(
+                        f"Warning: Could not notify Storage service: {response.status_code}"
+                    )
+        except Exception as e:
+            print(f"Warning: Failed to notify Storage service: {e}")
+
+    async def _fetch_metadata(self, video_id: str) -> Dict[str, Any]:
+        """Fetch metadata via Metadata service."""
+        metadata_url = f"http://localhost:8001/api/v1/metadata/video/{video_id}"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(metadata_url)
+            if response.status_code == 200:
+                return response.json()["data"]
+            else:
+                raise Exception(
+                    f"Metadata service error: {response.status_code} - {response.text}"
+                )
+
+    async def _store_metadata(self, video_id: str, metadata: Dict[str, Any]):
+        """Store metadata via Storage service."""
+        storage_url = "http://localhost:8003/api/v1/storage/save/metadata"
+        payload = {"video_id": video_id, "metadata": metadata}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(storage_url, json=payload)
+            if response.status_code == 200:
+                print(f"Stored metadata for video {video_id}")
+            else:
+                raise Exception(
+                    f"Storage service error: {response.status_code} - {response.text}"
+                )
 
     async def _register_service(
         self, registration: ServiceRegistration
