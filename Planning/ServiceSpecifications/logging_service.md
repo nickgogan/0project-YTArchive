@@ -373,7 +373,7 @@ class LoggingClient:
         self.service_name = service_name
         self.logging_url = logging_url
         self.client = httpx.AsyncClient()
-    
+
     async def log(self, level: str, message: str, **context):
         await self.client.post(
             f"{self.logging_url}/api/v1/logs",

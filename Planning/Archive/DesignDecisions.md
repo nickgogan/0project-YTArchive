@@ -139,7 +139,7 @@ class FailedDownload(BaseModel):
 # Video metadata
 youtube.videos().list(part="snippet,contentDetails,status", id=video_id)
 
-# Playlist metadata  
+# Playlist metadata
 youtube.playlists().list(part="snippet,contentDetails", id=playlist_id)
 
 # Playlist items
@@ -197,7 +197,7 @@ metadata/
 TIMEOUTS = {
     "connect": 5.0,      # Connection timeout
     "read": 30.0,        # Read timeout
-    "write": 30.0,       # Write timeout  
+    "write": 30.0,       # Write timeout
     "pool": 30.0         # Pool timeout
 }
 

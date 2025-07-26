@@ -51,18 +51,18 @@ fi
 log "Checking git status..."
 if [ -n "$(git status --porcelain)" ]; then
     warning "Working directory has uncommitted changes"
-    
+
     # Show what will be committed
     log "Changes to be committed:"
     git status --short
-    
+
     # Commit the changes
     log "Committing release preparation changes..."
     git add .
-    
+
     if git commit -m "Release v0.1.0 preparation: Update dependencies for Python 3.13 compatibility
 
-- Updated pydantic to v2.9.0 for Python 3.13 support  
+- Updated pydantic to v2.9.0 for Python 3.13 support
 - Updated pydantic-settings to v2.5.0
 - Added Python version constraint <3.14
 - Generated uv.lock file
@@ -90,7 +90,7 @@ success "Release Preparation Complete!"
 echo "============================================"
 echo ""
 echo "✅ Python 3.13 compatibility configured"
-echo "✅ Dependencies installed successfully"  
+echo "✅ Dependencies installed successfully"
 echo "✅ Git working directory is clean"
 echo "✅ Changes committed and pushed"
 echo ""

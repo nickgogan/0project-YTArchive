@@ -77,7 +77,7 @@ class ServiceName:
         self.shutdown_event = asyncio.Event()
         signal.signal(signal.SIGTERM, self._handle_shutdown)
         signal.signal(signal.SIGINT, self._handle_shutdown)
-    
+
     def _handle_shutdown(self, signum, frame):
         self.logger.info("Received shutdown signal", signal=signum)
         self.shutdown_event.set()

@@ -71,7 +71,7 @@ This document captures all architectural decisions and design choices made for t
   ```toml
   [project]
   dependencies = [...]  # Core runtime dependencies
-  
+
   [project.optional-dependencies]
   dev = [...]  # Development, testing, and tooling dependencies
   ```
