@@ -22,10 +22,10 @@ run_audit() {
     echo "📊 Running audit in $format format..."
 
     if [ -n "$output_file" ]; then
-        python scripts/test_audit.py --$format --output "$output_file"
+        python tests/test_audit.py --$format --output "$output_file"
         echo "✅ Report saved to: $output_file"
     else
-        python scripts/test_audit.py --$format
+        python tests/test_audit.py --$format
     fi
     echo ""
 }
@@ -34,7 +34,7 @@ run_audit() {
 case "${1:-console}" in
     "console"|"")
         echo "📺 Console Report:"
-        python scripts/test_audit.py
+        python tests/test_audit.py
         ;;
     "json")
         run_audit "json" "${2:-reports/test_audit.json}"
@@ -47,7 +47,7 @@ case "${1:-console}" in
         mkdir -p reports
 
         echo "📺 Console Report:"
-        python scripts/test_audit.py
+        python tests/test_audit.py
         echo ""
 
         echo "📄 JSON Report:"
@@ -60,7 +60,7 @@ case "${1:-console}" in
         ;;
     "strict")
         echo "🔒 Running strict validation..."
-        python scripts/test_audit.py --strict
+        python tests/test_audit.py --strict
         ;;
     "help")
         echo "Usage: $0 [console|json|markdown|all|strict|help] [output_file]"

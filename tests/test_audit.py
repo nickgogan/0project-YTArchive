@@ -128,7 +128,9 @@ class TestSuiteAuditor:
 
             # Walk through all nodes to find test functions
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+                if isinstance(
+                    node, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ) and node.name.startswith("test_"):
                     markers = []
 
                     # Check decorators
@@ -170,17 +172,50 @@ class TestSuiteAuditor:
                 if isinstance(node, ast.ClassDef) and (
                     "Test" in node.name or node.name.startswith("test_")
                 ):
+                    # First, check for class-level markers
+                    class_markers = []
+                    for decorator in node.decorator_list:
+                        marker_name = None
+                        if isinstance(decorator, ast.Attribute):
+                            # Handle @pytest.mark.marker
+                            if (
+                                isinstance(decorator.value, ast.Attribute)
+                                and decorator.value.attr == "mark"
+                                and isinstance(decorator.value.value, ast.Name)
+                                and decorator.value.value.id == "pytest"
+                            ):
+                                marker_name = decorator.attr
+                        elif isinstance(decorator, ast.Call):
+                            # Handle @pytest.mark.marker() with parentheses
+                            if (
+                                isinstance(decorator.func, ast.Attribute)
+                                and isinstance(decorator.func.value, ast.Attribute)
+                                and decorator.func.value.attr == "mark"
+                                and isinstance(decorator.func.value.value, ast.Name)
+                                and decorator.func.value.value.id == "pytest"
+                            ):
+                                marker_name = decorator.func.attr
+                        elif isinstance(decorator, ast.Name):
+                            # Handle simple decorator names
+                            if decorator.id in self.expected_markers:
+                                marker_name = decorator.id
+
+                        if marker_name and marker_name in self.expected_markers:
+                            class_markers.append(marker_name)
+
+                    # Now process methods in the class
                     for method in node.body:
                         if isinstance(
-                            method, ast.FunctionDef
+                            method, (ast.FunctionDef, ast.AsyncFunctionDef)
                         ) and method.name.startswith("test_"):
                             if method.name not in tests:  # Avoid duplicates
-                                markers = []
+                                markers = (
+                                    class_markers.copy()
+                                )  # Inherit class-level markers
 
                                 # Check decorators on methods
                                 for decorator in method.decorator_list:
                                     marker_name = None
-
                                     if isinstance(decorator, ast.Attribute):
                                         # Handle @pytest.mark.marker
                                         if (
@@ -194,19 +229,19 @@ class TestSuiteAuditor:
                                             marker_name = decorator.attr
                                     elif isinstance(decorator, ast.Call):
                                         # Handle @pytest.mark.marker() with parentheses
-                                        if isinstance(decorator.func, ast.Attribute):
-                                            if (
-                                                isinstance(
-                                                    decorator.func.value, ast.Attribute
-                                                )
-                                                and decorator.func.value.attr == "mark"
-                                                and isinstance(
-                                                    decorator.func.value.value, ast.Name
-                                                )
-                                                and decorator.func.value.value.id
-                                                == "pytest"
-                                            ):
-                                                marker_name = decorator.func.attr
+                                        if (
+                                            isinstance(decorator.func, ast.Attribute)
+                                            and isinstance(
+                                                decorator.func.value, ast.Attribute
+                                            )
+                                            and decorator.func.value.attr == "mark"
+                                            and isinstance(
+                                                decorator.func.value.value, ast.Name
+                                            )
+                                            and decorator.func.value.value.id
+                                            == "pytest"
+                                        ):
+                                            marker_name = decorator.func.attr
                                     elif isinstance(decorator, ast.Name):
                                         # Handle simple decorator names
                                         if decorator.id in self.expected_markers:
@@ -238,7 +273,10 @@ class TestSuiteAuditor:
                 tree = ast.parse(content)
 
                 for node in ast.walk(tree):
-                    if isinstance(node, ast.FunctionDef) and node.name == test_name:
+                    if (
+                        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and node.name == test_name
+                    ):
                         is_async = isinstance(node, ast.AsyncFunctionDef)
                         docstring = ast.get_docstring(node)
 
@@ -285,6 +323,29 @@ class TestSuiteAuditor:
 
         return marker_counts
 
+    def get_pytest_total_count(self) -> int:
+        """Get accurate total test count from pytest --collect-only."""
+        try:
+            result = subprocess.run(
+                ["uv", "run", "pytest", "--collect-only", "-q"],
+                capture_output=True,
+                text=True,
+                cwd=self.root_path,
+            )
+
+            if result.returncode == 0:
+                # Count test lines in output
+                test_lines = [
+                    line for line in result.stdout.split("\n") if "::test_" in line
+                ]
+                return len(test_lines)
+            else:
+                return 0
+
+        except Exception as e:
+            print(f"Warning: Could not run pytest for total count: {e}")
+            return 0
+
     def audit_test_suite(self) -> AuditResult:
         """Perform comprehensive audit of the test suite."""
         test_files = self.find_test_files()
@@ -312,20 +373,19 @@ class TestSuiteAuditor:
             if not any(marker in TEST_CATEGORIES for marker in func.markers)
         ]
 
-        # Get category counts from pytest
-        category_counts = self.get_pytest_markers()
-
-        # Validate consistency
-        categorized_count = sum(category_counts.values())
+        # Run pytest to get marker-based test counts
+        pytest_marker_counts = self.get_pytest_markers()
+        total_pytest_tests = self.get_pytest_total_count()
         total_tests = len(all_test_functions)
 
         if len(uncategorized_tests) > 0:
             issues.append(f"Found {len(uncategorized_tests)} uncategorized tests")
 
-        if categorized_count != total_tests - len(uncategorized_tests):
+        # Check for discrepancies
+        if total_pytest_tests != total_tests:
             warnings.append(
-                f"Category count mismatch: pytest reports {categorized_count}, "
-                f"AST analysis finds {total_tests - len(uncategorized_tests)} categorized"
+                f"Test count mismatch: pytest reports {total_pytest_tests}, "
+                f"AST analysis finds {total_tests} tests"
             )
 
         return AuditResult(
@@ -333,7 +393,7 @@ class TestSuiteAuditor:
             total_files=len(processed_files),
             categorized_tests=total_tests - len(uncategorized_tests),
             uncategorized_tests=uncategorized_tests,
-            category_counts=category_counts,
+            category_counts=pytest_marker_counts,
             issues=issues,
             warnings=warnings,
             test_files=processed_files,
