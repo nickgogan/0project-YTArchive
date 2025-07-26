@@ -149,6 +149,14 @@ class YTArchiveAPI:
         response.raise_for_status()
         return response.json()
 
+    async def get_playlist_metadata(self, playlist_id: str) -> Dict[str, Any]:
+        """Get playlist metadata."""
+        response = await self.client.get(
+            f"{SERVICES['metadata']}/api/v1/metadata/playlist/{playlist_id}"
+        )
+        response.raise_for_status()
+        return response.json()
+
 
 def format_duration(seconds: Optional[int]) -> str:
     """Format duration in seconds to readable format."""
@@ -794,6 +802,336 @@ async def _create_workplan(
             console.print(f"[red]HTTP Error: {e}[/red]")
         except Exception as e:
             console.print(f"[red]Error: {safe_error_message(e)}[/red]")
+
+
+@cli.group()
+def playlist():
+    """Manage playlist downloads and operations."""
+    pass
+
+
+@playlist.command("download")
+@click.argument("playlist_url")
+@click.option(
+    "--quality",
+    "-q",
+    default="1080p",
+    type=click.Choice(["best", "1080p", "720p", "480p", "360p", "audio"]),
+    help="Video quality to download",
+)
+@click.option(
+    "--output", "-o", default="~/YTArchive", help="Output directory for downloads"
+)
+@click.option("--max-concurrent", "-c", default=3, help="Maximum concurrent downloads")
+@click.option(
+    "--metadata-only", is_flag=True, help="Download only metadata (no video files)"
+)
+def playlist_download(
+    playlist_url: str,
+    quality: str,
+    output: str,
+    max_concurrent: int,
+    metadata_only: bool,
+):
+    """Download all videos from a YouTube playlist."""
+    asyncio.run(
+        _download_playlist(playlist_url, quality, output, max_concurrent, metadata_only)
+    )
+
+
+@playlist.command("info")
+@click.argument("playlist_url")
+@click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
+def playlist_info(playlist_url: str, json_output: bool):
+    """Get information about a YouTube playlist."""
+    asyncio.run(_get_playlist_info(playlist_url, json_output))
+
+
+@playlist.command("status")
+@click.argument("job_id")
+@click.option("--watch", "-w", is_flag=True, help="Watch for status changes")
+def playlist_status(job_id: str, watch: bool):
+    """Check the status of a playlist download job."""
+    asyncio.run(_get_playlist_status(job_id, watch))
+
+
+async def _download_playlist(
+    playlist_url: str,
+    quality: str,
+    output: str,
+    max_concurrent: int,
+    metadata_only: bool,
+):
+    """Async implementation of playlist download."""
+    async with YTArchiveAPI() as api:
+        try:
+            console.print("[blue]🎵 Starting playlist download...[/blue]")
+            console.print(f"[blue]📝 Playlist URL: {playlist_url}[/blue]")
+            console.print(f"[blue]🎬 Quality: {quality}[/blue]")
+            console.print(f"[blue]📂 Output: {output}[/blue]")
+            console.print(f"[blue]⚡ Max concurrent: {max_concurrent}[/blue]")
+
+            # Extract playlist ID from URL
+            playlist_id = _extract_playlist_id(playlist_url)
+            if not playlist_id:
+                console.print(f"[red]❌ Invalid playlist URL: {playlist_url}[/red]")
+                return
+
+            # Get playlist metadata
+            console.print("[yellow]📊 Fetching playlist information...[/yellow]")
+            playlist_metadata = await api.get_playlist_metadata(playlist_id)
+
+            if not playlist_metadata:
+                console.print("[red]❌ Failed to fetch playlist metadata[/red]")
+                return
+
+            # Display playlist info
+            console.print(
+                Panel(
+                    f"[bold green]📝 {playlist_metadata['title']}[/bold green]\n"
+                    f"[blue]👤 Channel: {playlist_metadata.get('channel_title', 'Unknown')}[/blue]\n"
+                    f"[blue]🎬 Videos: {len(playlist_metadata['videos'])}[/blue]\n"
+                    f"[blue]📝 Description: {playlist_metadata.get('description', 'No description')[:100]}...[/blue]",
+                    title="[bold blue]🎵 Playlist Information[/bold blue]",
+                )
+            )
+
+            # Create playlist download job
+            job_data = {
+                "job_type": "PLAYLIST_DOWNLOAD",
+                "playlist_id": playlist_id,
+                "config": {
+                    "quality": quality,
+                    "output_path": output,
+                    "max_concurrent": max_concurrent,
+                    "metadata_only": metadata_only,
+                    "videos": playlist_metadata["videos"],
+                },
+            }
+
+            job_response = await api.create_job(
+                job_type="PLAYLIST_DOWNLOAD",
+                video_id=playlist_id,
+                config=job_data["config"],
+            )
+
+            job_id = job_response["job_id"]
+            console.print(f"[green]✅ Playlist download job created: {job_id}[/green]")
+
+            # Start job execution
+            await api.execute_job(job_id)
+            console.print("[green]🚀 Playlist download started![/green]")
+
+            # Monitor progress
+            await _monitor_playlist_progress(
+                api, job_id, len(playlist_metadata["videos"])
+            )
+
+        except httpx.HTTPError as e:
+            console.print(f"[red]❌ HTTP Error: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]❌ Error: {safe_error_message(e)}[/red]")
+
+
+async def _get_playlist_info(playlist_url: str, json_output: bool):
+    """Async implementation of playlist info fetching."""
+    async with YTArchiveAPI() as api:
+        try:
+            # Extract playlist ID from URL
+            playlist_id = _extract_playlist_id(playlist_url)
+            if not playlist_id:
+                console.print(f"[red]❌ Invalid playlist URL: {playlist_url}[/red]")
+                return
+
+            # Get playlist metadata
+            console.print("[yellow]📊 Fetching playlist information...[/yellow]")
+            playlist_metadata = await api.get_playlist_metadata(playlist_id)
+
+            if not playlist_metadata:
+                console.print("[red]❌ Failed to fetch playlist metadata[/red]")
+                return
+
+            if json_output:
+                console.print(json.dumps(playlist_metadata, indent=2))
+            else:
+                # Display playlist info in rich format
+                console.print(
+                    Panel(
+                        f"[bold green]📝 {playlist_metadata['title']}[/bold green]\n"
+                        f"[blue]👤 Channel: {playlist_metadata.get('channel_title', 'Unknown')}[/blue]\n"
+                        f"[blue]🎬 Videos: {len(playlist_metadata['videos'])}[/blue]\n"
+                        f"[blue]📅 Created: {playlist_metadata.get('created_date', 'Unknown')}[/blue]\n"
+                        f"[blue]📝 Description: {playlist_metadata.get('description', 'No description')}[/blue]",
+                        title="[bold blue]🎵 Playlist Information[/bold blue]",
+                    )
+                )
+
+                # Display video list
+                if playlist_metadata["videos"]:
+                    table = Table(title="📼 Playlist Videos")
+                    table.add_column("#", style="cyan")
+                    table.add_column("Title", style="green")
+                    table.add_column("Duration", style="blue")
+                    table.add_column("Status", style="yellow")
+
+                    for i, video in enumerate(playlist_metadata["videos"][:10]):
+                        table.add_row(
+                            str(i + 1),
+                            video.get("title", "Unknown"),
+                            format_duration(video.get("duration_seconds")),
+                            video.get("availability", "Available"),
+                        )
+
+                    if len(playlist_metadata["videos"]) > 10:
+                        table.add_row(
+                            "...",
+                            f"... and {len(playlist_metadata['videos']) - 10} more",
+                            "",
+                            "",
+                        )
+
+                    console.print(table)
+
+        except httpx.HTTPError as e:
+            console.print(f"[red]❌ HTTP Error: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]❌ Error: {safe_error_message(e)}[/red]")
+
+
+async def _get_playlist_status(job_id: str, watch: bool):
+    """Async implementation of playlist status checking."""
+    async with YTArchiveAPI() as api:
+        try:
+            if watch:
+                console.print(
+                    "[blue]👀 Watching playlist job status (Ctrl+C to exit)...[/blue]"
+                )
+
+                while True:
+                    job_status = await api.get_job(job_id)
+
+                    # Display current status
+                    _display_playlist_job_status(job_status)
+
+                    if job_status["status"] in ["completed", "failed", "cancelled"]:
+                        break
+
+                    await asyncio.sleep(2)
+            else:
+                job_status = await api.get_job(job_id)
+                _display_playlist_job_status(job_status)
+
+        except KeyboardInterrupt:
+            console.print("\n[yellow]⏹️ Stopped watching job status[/yellow]")
+        except httpx.HTTPError as e:
+            console.print(f"[red]❌ HTTP Error: {e}[/red]")
+        except Exception as e:
+            console.print(f"[red]❌ Error: {safe_error_message(e)}[/red]")
+
+
+def _extract_playlist_id(playlist_url: str) -> Optional[str]:
+    """Extract playlist ID from YouTube playlist URL."""
+    import re
+
+    # Match playlist URL patterns
+    patterns = [
+        r"[&?]list=([^&]+)",  # Standard playlist parameter
+        r"/playlist\?list=([^&]+)",  # Direct playlist URL
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, playlist_url)
+        if match:
+            return match.group(1)
+
+    return None
+
+
+def _display_playlist_job_status(job_status: Dict[str, Any]):
+    """Display playlist job status in rich format."""
+    status = job_status["status"]
+    progress = job_status.get("progress", {})
+
+    # Status color mapping
+    status_colors = {
+        "pending": "yellow",
+        "running": "blue",
+        "completed": "green",
+        "failed": "red",
+        "cancelled": "orange",
+    }
+
+    status_color = status_colors.get(status, "white")
+
+    # Create status panel
+    status_info = (
+        f"[bold {status_color}]📋 Status: {status.upper()}[/bold {status_color}]\n"
+        f"[blue]🆔 Job ID: {job_status['job_id']}[/blue]\n"
+        f"[blue]🎵 Type: {job_status['job_type']}[/blue]\n"
+        f"[blue]📅 Created: {job_status['created_at']}[/blue]"
+    )
+
+    if progress:
+        completed = progress.get("completed_videos", 0)
+        total = progress.get("total_videos", 0)
+        failed = progress.get("failed_videos", 0)
+
+        if total > 0:
+            percentage = (completed / total) * 100
+            status_info += (
+                f"\n[green]✅ Progress: {completed}/{total} ({percentage:.1f}%)[/green]"
+            )
+            if failed > 0:
+                status_info += f"\n[red]❌ Failed: {failed}[/red]"
+
+    console.print(
+        Panel(status_info, title="[bold blue]🎵 Playlist Job Status[/bold blue]")
+    )
+
+
+async def _monitor_playlist_progress(api: YTArchiveAPI, job_id: str, total_videos: int):
+    """Monitor playlist download progress with a progress bar."""
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task(
+            f"Downloading {total_videos} videos...", total=total_videos
+        )
+
+        while True:
+            try:
+                job_status = await api.get_job(job_id)
+                job_progress = job_status.get("progress", {})
+
+                completed = job_progress.get("completed_videos", 0)
+                failed = job_progress.get("failed_videos", 0)
+
+                progress.update(
+                    task,
+                    completed=completed,
+                    description=f"Downloaded: {completed}, Failed: {failed}",
+                )
+
+                if job_status["status"] in ["completed", "failed", "cancelled"]:
+                    if job_status["status"] == "completed":
+                        console.print(
+                            f"[green]✅ Playlist download completed! {completed}/{total_videos} videos downloaded[/green]"
+                        )
+                    elif job_status["status"] == "failed":
+                        console.print("[red]❌ Playlist download failed[/red]")
+                    else:
+                        console.print("[yellow]⏹️ Playlist download cancelled[/yellow]")
+                    break
+
+                await asyncio.sleep(3)
+
+            except Exception as e:
+                console.print(
+                    f"[red]❌ Error monitoring progress: {safe_error_message(e)}[/red]"
+                )
+                break
 
 
 if __name__ == "__main__":
