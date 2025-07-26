@@ -46,7 +46,7 @@ class JobsService(BaseService):
 
     def __init__(self, service_name: str, settings: ServiceSettings):
         super().__init__(service_name, settings)
-        self.jobs_dir = Path("jobs")
+        self.jobs_dir = Path("logs/jobs")
         self.registry_dir = Path("registry")
         self.jobs_dir.mkdir(exist_ok=True)
         self.registry_dir.mkdir(exist_ok=True)
