@@ -169,7 +169,7 @@ YTARCHIVE_MAX_CONCURRENT=5
 # Storage Configuration
 YTARCHIVE_OUTPUT_DIR=/opt/ytarchive/downloads
 YTARCHIVE_STORAGE_DIR=/opt/ytarchive/storage
-YTARCHIVE_WORK_PLANS_DIR=/opt/ytarchive/logs/work_plans
+YTARCHIVE_RECOVERY_PLANS_DIR=/opt/ytarchive/logs/recovery_plans
 
 # Service Ports
 YTARCHIVE_JOBS_PORT=8001

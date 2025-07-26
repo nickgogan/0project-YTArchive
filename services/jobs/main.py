@@ -294,7 +294,7 @@ class JobsService(BaseService):
 
         # If job failed, add to work plan for tracking
         if new_status == JobStatus.FAILED:
-            await self._add_to_work_plan(job_data, error_details)
+            await self._add_to_recovery_plan(job_data, error_details)
 
         # Save updated job data
         with open(job_file, "w") as f:
@@ -781,8 +781,8 @@ class JobsService(BaseService):
                     # Create video URL from video_id
                     video_url = f"https://www.youtube.com/watch?v={video_id}"
 
-                    # Create job request for individual video
-                    video_job_request = CreateJobRequest(
+                    # Create recovery plan request for individual video
+                    recovery_plan_request = CreateJobRequest(
                         job_type=JobType.VIDEO_DOWNLOAD,
                         urls=[video_url],
                         options={
@@ -798,7 +798,7 @@ class JobsService(BaseService):
                     )
 
                     # Create the actual job
-                    created_job = await self._create_job(video_job_request)
+                    created_job = await self._create_job(recovery_plan_request)
 
                     return {
                         "job_id": created_job.job_id,
@@ -806,7 +806,7 @@ class JobsService(BaseService):
                         "video_url": video_url,
                         "title": video.get("title", "Unknown Title"),
                         "duration": video.get("duration_seconds", 0),
-                        "job_request": video_job_request,
+                        "job_request": recovery_plan_request,
                         "created_job": created_job,
                         "status": "created",
                     }
@@ -1372,10 +1372,10 @@ class JobsService(BaseService):
         except Exception:
             return False
 
-    async def _add_to_work_plan(
+    async def _add_to_recovery_plan(
         self, job_data: Dict[str, Any], error_details: Optional[str] = None
     ):
-        """Add failed job to work plan for tracking and potential retry."""
+        """Add failed job to recovery plan for tracking and potential retry."""
         try:
             # Extract video IDs from job URLs
             video_ids = []
@@ -1419,16 +1419,18 @@ class JobsService(BaseService):
                     result = response.json()
                     if result.get("success"):
                         print(
-                            f"Added failed job {job_data.get('job_id')} to work plan {result.get('data', {}).get('plan_id')}"
+                            f"Added failed job {job_data.get('job_id')} to recovery plan {result.get('data', {}).get('plan_id')}"
                         )
                     else:
-                        print(f"Failed to add job to work plan: {result.get('error')}")
+                        print(
+                            f"Failed to add job to recovery plan: {result.get('error')}"
+                        )
                 else:
                     print(f"Storage service returned status {response.status_code}")
 
         except Exception as e:
-            # Don't fail the job update if work plan addition fails
-            print(f"Warning: Failed to add job to work plan: {e}")
+            # Don't fail the job update if recovery plan addition fails
+            print(f"Warning: Failed to add job to recovery plan: {e}")
 
 
 if __name__ == "__main__":

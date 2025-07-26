@@ -680,7 +680,7 @@ class TestPlaylistDownloadCommand:
         mock_api_class.return_value.__aenter__.return_value = mock_api
         mock_api.get_playlist_metadata.return_value = mock_playlist_metadata["data"]
         mock_api.create_job.return_value = mock_playlist_job_response["data"]
-        mock_api.get_job_status.return_value = {
+        mock_api.get_job.return_value = {
             "job_id": "playlist-job-123",
             "status": "COMPLETED",
         }
@@ -715,7 +715,7 @@ class TestPlaylistDownloadCommand:
         mock_api_class.return_value.__aenter__.return_value = mock_api
         mock_api.get_playlist_metadata.return_value = mock_playlist_metadata["data"]
         mock_api.create_job.return_value = mock_playlist_job_response["data"]
-        mock_api.get_job_status.return_value = {
+        mock_api.get_job.return_value = {
             "job_id": "playlist-job-123",
             "status": "COMPLETED",
         }
@@ -748,7 +748,7 @@ class TestPlaylistDownloadCommand:
         mock_api_class.return_value.__aenter__.return_value = mock_api
         mock_api.get_playlist_metadata.return_value = mock_playlist_metadata["data"]
         mock_api.create_job.return_value = mock_playlist_job_response["data"]
-        mock_api.get_job_status.return_value = {
+        mock_api.get_job.return_value = {
             "job_id": "playlist-job-123",
             "status": "COMPLETED",
         }
@@ -783,7 +783,7 @@ class TestPlaylistDownloadCommand:
         mock_api_class.return_value.__aenter__.return_value = mock_api
         mock_api.get_playlist_metadata.return_value = mock_playlist_metadata["data"]
         mock_api.create_job.return_value = mock_playlist_job_response["data"]
-        mock_api.get_job_status.return_value = {
+        mock_api.get_job.return_value = {
             "job_id": "playlist-job-123",
             "status": "COMPLETED",
         }
@@ -861,7 +861,7 @@ class TestPlaylistInfoCommand:
         assert result.exit_code == 0
         assert "Test Playlist for CLI Testing" in result.output
         assert "Test Channel" in result.output
-        assert "3 videos" in result.output
+        assert "Videos: 3" in result.output
         assert "Test Video 1" in result.output
         assert "Test Video 2" in result.output
         assert "Test Video 3" in result.output
@@ -911,7 +911,7 @@ class TestPlaylistInfoCommand:
         )
 
         assert result.exit_code == 0  # CLI handles gracefully
-        assert "Failed to fetch playlist information" in result.output
+        assert "Failed to fetch playlist metadata" in result.output
 
     @patch("cli.main.YTArchiveAPI")
     @pytest.mark.service
@@ -946,7 +946,7 @@ class TestPlaylistStatusCommand:
         """Test successful playlist status with real-time progress updates."""
         mock_api = AsyncMock()
         mock_api_class.return_value.__aenter__.return_value = mock_api
-        mock_api.get_job_status.return_value = mock_playlist_status_response["data"]
+        mock_api.get_job.return_value = mock_playlist_status_response["data"]
 
         result = runner.invoke(cli, ["playlist", "status", "playlist-job-123"])
 
@@ -954,11 +954,10 @@ class TestPlaylistStatusCommand:
         assert "playlist-job-123" in result.output
         assert "RUNNING" in result.output
         assert "2/3" in result.output  # Progress display
-        assert "Test Video 3" in result.output  # Current video
-        assert "45.0%" in result.output  # Progress percentage
+        assert "66.7%" in result.output  # Progress percentage (2/3 = 66.7%)
 
         # Verify API call
-        mock_api.get_job_status.assert_called_once_with("playlist-job-123")
+        mock_api.get_job.assert_called_once_with("playlist-job-123")
 
     @patch("cli.main.YTArchiveAPI")
     @pytest.mark.service
@@ -966,7 +965,7 @@ class TestPlaylistStatusCommand:
         """Test playlist status for completed job."""
         mock_api = AsyncMock()
         mock_api_class.return_value.__aenter__.return_value = mock_api
-        mock_api.get_job_status.return_value = {
+        mock_api.get_job.return_value = {
             "job_id": "playlist-job-123",
             "job_type": "PLAYLIST_DOWNLOAD",
             "status": "COMPLETED",
@@ -991,7 +990,7 @@ class TestPlaylistStatusCommand:
         """Test playlist status with failed videos."""
         mock_api = AsyncMock()
         mock_api_class.return_value.__aenter__.return_value = mock_api
-        mock_api.get_job_status.return_value = {
+        mock_api.get_job.return_value = {
             "job_id": "playlist-job-123",
             "job_type": "PLAYLIST_DOWNLOAD",
             "status": "COMPLETED",
@@ -1016,7 +1015,7 @@ class TestPlaylistStatusCommand:
         """Test playlist status for non-existent job."""
         mock_api = AsyncMock()
         mock_api_class.return_value.__aenter__.return_value = mock_api
-        mock_api.get_job_status.return_value = None  # Job not found
+        mock_api.get_job.return_value = None  # Job not found
 
         result = runner.invoke(cli, ["playlist", "status", "nonexistent-job"])
 

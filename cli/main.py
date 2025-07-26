@@ -483,27 +483,27 @@ def logs(service: Optional[str], level: Optional[str], lines: int, follow: bool)
 
 
 @cli.group()
-def workplan() -> None:
-    """Manage work plans for failed and unavailable videos."""
+def recovery() -> None:
+    """Manage recovery plans for failed and unavailable videos."""
     pass
 
 
-@workplan.command()
+@recovery.command()
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
 def list(json_output: bool) -> None:
-    """List all work plans."""
-    asyncio.run(_list_workplans(json_output))
+    """List all recovery plans."""
+    asyncio.run(_list_recovery_plans(json_output))
 
 
-@workplan.command()
+@recovery.command()
 @click.argument("plan_id")
 @click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
 def show(plan_id: str, json_output: bool) -> None:
-    """Show details of a specific work plan."""
-    asyncio.run(_show_workplan(plan_id, json_output))
+    """Show details of a specific recovery plan."""
+    asyncio.run(_show_recovery_plan(plan_id, json_output))
 
 
-@workplan.command()
+@recovery.command()
 @click.option(
     "--unavailable-videos",
     "unavailable_videos_file",
@@ -519,9 +519,9 @@ def show(plan_id: str, json_output: bool) -> None:
 def create(
     unavailable_videos_file: Optional[str], failed_downloads_file: Optional[str]
 ) -> None:
-    """Create a new work plan from failed/unavailable videos."""
+    """Create a new recovery plan from failed/unavailable videos."""
     asyncio.run(
-        _create_workplan(
+        _create_recovery_plan(
             unavailable_videos_file=unavailable_videos_file,
             failed_downloads_file=failed_downloads_file,
         )
@@ -578,8 +578,8 @@ async def _view_logs(
             console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
-async def _list_workplans(json_output: bool):
-    """Async implementation of work plan listing."""
+async def _list_recovery_plans(json_output: bool):
+    """Async implementation of recovery plan listing."""
     async with YTArchiveAPI() as api:
         try:
             # Get storage stats to find work plans directory
@@ -657,8 +657,8 @@ async def _list_workplans(json_output: bool):
             console.print(f"[red]Error: {safe_error_message(e)}[/red]")
 
 
-async def _show_workplan(plan_id: str, json_output: bool):
-    """Async implementation of work plan display."""
+async def _show_recovery_plan(plan_id: str, json_output: bool):
+    """Async implementation of recovery plan display."""
     try:
         work_plans_dir = Path("~/.ytarchive/data/work_plans").expanduser()
         plan_file = work_plans_dir / f"{plan_id}_plan.json"
@@ -730,10 +730,10 @@ async def _show_workplan(plan_id: str, json_output: bool):
         console.print(f"[red]Error: {e}[/red]")
 
 
-async def _create_workplan(
+async def _create_recovery_plan(
     unavailable_videos_file: Optional[str], failed_downloads_file: Optional[str]
 ):
-    """Async implementation of work plan creation."""
+    """Async implementation of recovery plan creation."""
     async with YTArchiveAPI() as api:
         try:
             unavailable_videos = []

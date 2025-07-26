@@ -575,7 +575,7 @@ GET /storage/workplan
 {
   "status": "success",
   "data": {
-    "work_plans": [
+    "recovery_plans": [
       {
         "id": "wp_123",
         "video_ids": ["dQw4w9WgXcQ"],

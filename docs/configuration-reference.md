@@ -33,7 +33,7 @@ Configuration is loaded in the following order (highest precedence first):
 |----------|-------------|------|---------|
 | `YTARCHIVE_OUTPUT_DIR` | Base directory for downloads | path | `./downloads` |
 | `YTARCHIVE_STORAGE_DIR` | Metadata storage directory | path | `./storage` |
-| `YTARCHIVE_WORK_PLANS_DIR` | Work plans directory | path | `./logs/work_plans` |
+| `YTARCHIVE_RECOVERY_PLANS_DIR` | Recovery plans directory | path | `./logs/recovery_plans` |
 | `YTARCHIVE_LOGS_DIR` | Logs directory | path | `./logs` |
 | `YTARCHIVE_TEMP_DIR` | Temporary files directory | path | `/tmp/ytarchive` |
 
@@ -203,7 +203,7 @@ storage:
   paths:
     base: "./downloads"
     metadata: "./storage"
-    work_plans: "./logs/work_plans"
+    recovery_plans: "./logs/recovery_plans"
     temp: "/tmp/ytarchive"
   organization:
     structure: "flat"  # flat, date, channel
@@ -474,7 +474,7 @@ services:
 paths:
   output: "/opt/ytarchive/downloads"
   storage: "/opt/ytarchive/storage"
-  work_plans: "/opt/ytarchive/logs/work_plans"
+  recovery_plans: "/opt/ytarchive/logs/recovery_plans"
   logs: "/opt/ytarchive/logs"
   temp: "/tmp/ytarchive"
 

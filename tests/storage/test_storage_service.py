@@ -247,7 +247,7 @@ async def test_generate_work_plan(storage_service: StorageService):
     }
 
     async with AsyncClient(app=storage_service.app, base_url="http://test") as client:
-        response = await client.post("/api/v1/storage/work-plan", json=request_data)
+        response = await client.post("/api/v1/storage/recovery", json=request_data)
         assert response.status_code == 200
 
         result = response.json()
@@ -258,7 +258,7 @@ async def test_generate_work_plan(storage_service: StorageService):
         assert result["data"]["failed_count"] == 1
 
         # Verify file was created
-        plan_files = list(storage_service.work_plans_dir.glob("*_plan.json"))
+        plan_files = list(storage_service.recovery_plans_dir.glob("*_plan.json"))
         assert len(plan_files) >= 1
 
 
@@ -350,7 +350,7 @@ def test_storage_directory_creation(storage_service: StorageService):
         storage_service.metadata_dir / "videos",
         storage_service.metadata_dir / "playlists",
         storage_service.videos_dir,
-        storage_service.work_plans_dir,
+        storage_service.recovery_plans_dir,
     ]
 
     for directory in expected_dirs:
@@ -368,4 +368,4 @@ def test_storage_service_initialization(temp_storage_dir):
     assert hasattr(service, "base_output_dir")
     assert hasattr(service, "metadata_dir")
     assert hasattr(service, "videos_dir")
-    assert hasattr(service, "work_plans_dir")
+    assert hasattr(service, "recovery_plans_dir")

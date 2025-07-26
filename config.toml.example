@@ -15,7 +15,7 @@ videos_dir = "videos"
 base_data_dir = "~/.ytarchive/data"
 jobs_dir = "${base_data_dir}/jobs"
 registry_dir = "${base_data_dir}/registry"
-work_plans_dir = "${base_data_dir}/work_plans"
+recovery_plans_dir = "${base_data_dir}/recovery_plans"
 tmp_dir = "${base_data_dir}/tmp"
 logs_dir = "${base_data_dir}/logs"
 

@@ -92,17 +92,17 @@ python cli/main.py storage stats
 python cli/main.py storage search "search query"
 ```
 
-#### Work Plans (Failed Download Recovery)
+#### Recovery Plans (Failed Download Recovery)
 
 ```bash
-# List work plans (failed downloads)
-python cli/main.py workplan list
+# List recovery plans (failed downloads)
+python cli/main.py recovery list
 
-# Show details of a specific work plan
-python cli/main.py workplan show WORK_PLAN_ID
+# Show details of a specific recovery plan
+python cli/main.py recovery show PLAN_ID
 
-# Create a work plan for specific videos
-python cli/main.py workplan create https://www.youtube.com/watch?v=VIDEO_ID
+# Create a recovery plan for specific videos
+python cli/main.py recovery create https://www.youtube.com/watch?v=VIDEO_ID
 ```
 
 ## Advanced Usage
@@ -196,7 +196,7 @@ YTArchive/
 ├── storage/            # Internal storage database
 ├── logs/              # Centralized operational logs
 │   ├── jobs/          # Job processing records
-│   ├── work_plans/    # Failed download recovery plans
+│   ├── recovery_plans/    # Failed download recovery plans
 │   ├── error_reports/  # Error logging
 │   ├── failed_downloads/ # Failed download tracking
 │   ├── playlist_results/ # Playlist processing results
@@ -225,19 +225,19 @@ YTArchive/
    Solution: Check internet connection and retry
    ```
 
-### Work Plans for Failed Downloads
+### Recovery Plans for Failed Downloads
 
-YTArchive automatically creates work plans for failed downloads:
+YTArchive automatically creates recovery plans for failed downloads:
 
 ```bash
 # Check failed downloads
-python cli/main.py workplan list
+python cli/main.py recovery list
 
 # Retry failed downloads
-python cli/main.py workplan retry WORK_PLAN_ID
+python cli/main.py recovery retry PLAN_ID
 
 # Retry all failed downloads
-python cli/main.py workplan retry --all
+python cli/main.py recovery retry --all
 ```
 
 ## Integration

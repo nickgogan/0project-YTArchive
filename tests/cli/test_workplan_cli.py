@@ -1,4 +1,4 @@
-"""Tests for work plan CLI commands."""
+"""Tests for recovery plan CLI commands."""
 
 import json
 import asyncio
@@ -6,11 +6,11 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from click.testing import CliRunner
 
-from cli.main import cli, _list_workplans, _create_workplan
+from cli.main import cli, _list_recovery_plans, _create_recovery_plan
 
 
-class TestWorkPlanCLI:
-    """Test suite for work plan CLI commands."""
+class TestRecoveryPlanCLI:
+    """Test suite for recovery plan CLI commands."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -20,10 +20,12 @@ class TestWorkPlanCLI:
     @patch("cli.main.YTArchiveAPI")
     def test_workplan_help(self, mock_api):
         """Test work plan help command displays correctly."""
-        result = self.runner.invoke(cli, ["workplan", "--help"])
+        result = self.runner.invoke(cli, ["recovery", "--help"])
 
         assert result.exit_code == 0
-        assert "Manage work plans for failed and unavailable videos" in result.output
+        assert (
+            "Manage recovery plans for failed and unavailable videos" in result.output
+        )
         assert "create" in result.output
         assert "list" in result.output
         assert "show" in result.output
@@ -45,7 +47,7 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aenter__ = AsyncMock(return_value=mock_api_instance)
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        result = self.runner.invoke(cli, ["workplan", "list"])
+        result = self.runner.invoke(cli, ["recovery", "list"])
 
         assert result.exit_code == 0
         assert "No work plans directory found" in result.output
@@ -88,7 +90,7 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
         # Test the async function directly
-        asyncio.run(_list_workplans(json_output=False))
+        asyncio.run(_list_recovery_plans(json_output=False))
 
         # Verify console output was called (table should be printed)
         mock_console.assert_called()
@@ -110,7 +112,7 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aenter__ = AsyncMock(return_value=mock_api_instance)
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        result = self.runner.invoke(cli, ["workplan", "show", "nonexistent"])
+        result = self.runner.invoke(cli, ["recovery", "show", "nonexistent"])
 
         assert result.exit_code == 0
         assert "not found" in result.output
@@ -141,7 +143,7 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
         # Test the async function directly with mock data
-        asyncio.run(_create_workplan(None, None))
+        asyncio.run(_create_recovery_plan(None, None))
 
         # Verify console output was called (success message should be printed)
         mock_console.assert_called()
@@ -155,7 +157,7 @@ class TestWorkPlanCLI:
         mock_api.return_value.__aenter__ = AsyncMock(return_value=mock_api_instance)
         mock_api.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        result = self.runner.invoke(cli, ["workplan", "create"])
+        result = self.runner.invoke(cli, ["recovery", "create"])
 
         assert result.exit_code == 0
         assert "No unavailable videos or failed downloads provided" in result.output
@@ -163,27 +165,27 @@ class TestWorkPlanCLI:
     @pytest.mark.service
     def test_workplan_create_help(self):
         """Test work plan create help command."""
-        result = self.runner.invoke(cli, ["workplan", "create", "--help"])
+        result = self.runner.invoke(cli, ["recovery", "create", "--help"])
 
         assert result.exit_code == 0
-        assert "Create a new work plan" in result.output
+        assert "Create a new recovery plan" in result.output
         assert "--unavailable-videos" in result.output
         assert "--failed-downloads" in result.output
 
     @pytest.mark.service
     def test_workplan_list_help(self):
         """Test work plan list help command."""
-        result = self.runner.invoke(cli, ["workplan", "list", "--help"])
+        result = self.runner.invoke(cli, ["recovery", "list", "--help"])
 
         assert result.exit_code == 0
-        assert "List all work plans" in result.output
+        assert "List all recovery plans" in result.output
         assert "--json" in result.output
 
     @pytest.mark.service
     def test_workplan_show_help(self):
         """Test work plan show help command."""
-        result = self.runner.invoke(cli, ["workplan", "show", "--help"])
+        result = self.runner.invoke(cli, ["recovery", "show", "--help"])
 
         assert result.exit_code == 0
-        assert "Show details of a specific work plan" in result.output
+        assert "Show details of a specific recovery plan" in result.output
         assert "--json" in result.output

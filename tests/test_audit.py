@@ -65,7 +65,7 @@ TEST_CATEGORIES = {
 
 
 @dataclass
-class TestFunction:
+class AuditTestFunction:
     """Represents a test function with its metadata."""
 
     name: str
@@ -77,11 +77,11 @@ class TestFunction:
 
 
 @dataclass
-class TestFile:
+class AuditTestFile:
     """Represents a test file with its test functions."""
 
     path: str
-    functions: List[TestFunction]
+    functions: List[AuditTestFunction]
     total_tests: int
 
 
@@ -92,14 +92,14 @@ class AuditResult:
     total_tests: int
     total_files: int
     categorized_tests: int
-    uncategorized_tests: List[TestFunction]
+    uncategorized_tests: List[AuditTestFunction]
     category_counts: Dict[str, int]
     issues: List[str]
     warnings: List[str]
-    test_files: List[TestFile]
+    test_files: List[AuditTestFile]
 
 
-class TestSuiteAuditor:
+class SuiteAuditor:
     """Main auditor class for analyzing the test suite."""
 
     def __init__(self, root_path: str = "."):
@@ -260,7 +260,7 @@ class TestSuiteAuditor:
             print(f"Warning: Could not parse {filepath}: {e}")
             return {}
 
-    def extract_test_functions(self, file_path: Path) -> List[TestFunction]:
+    def extract_test_functions(self, file_path: Path) -> List[AuditTestFunction]:
         """Extract test functions and their metadata from a Python file."""
         test_info = self._extract_test_info_from_file(file_path)
         functions = []
@@ -281,7 +281,7 @@ class TestSuiteAuditor:
                         docstring = ast.get_docstring(node)
 
                         functions.append(
-                            TestFunction(
+                            AuditTestFunction(
                                 name=node.name,
                                 file_path=str(file_path),
                                 line_number=node.lineno,
@@ -359,7 +359,7 @@ class TestSuiteAuditor:
             functions = self.extract_test_functions(file_path)
             all_test_functions.extend(functions)
 
-            test_file = TestFile(
+            test_file = AuditTestFile(
                 path=str(file_path.relative_to(self.root_path)),
                 functions=functions,
                 total_tests=len(functions),
@@ -574,7 +574,7 @@ def main():
     args = parser.parse_args()
 
     # Run the audit
-    auditor = TestSuiteAuditor(args.root)
+    auditor = SuiteAuditor(args.root)
     result = auditor.audit_test_suite()
     reporter = AuditReporter(result)
 

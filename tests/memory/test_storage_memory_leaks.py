@@ -143,7 +143,14 @@ class TestStorageServiceMemoryLeaks:
                 # Import required models
                 from services.common.models import UnavailableVideo, FailedDownload
 
-                # Create multiple work plans
+                # Clean up any existing recovery plan files from previous test runs
+                import shutil
+
+                if storage_service.recovery_plans_dir.exists():
+                    shutil.rmtree(storage_service.recovery_plans_dir)
+                storage_service.recovery_plans_dir.mkdir(parents=True, exist_ok=True)
+
+                # Create multiple recovery plans
                 for i in range(10):
                     # Create UnavailableVideo instances
                     unavailable_videos = []
@@ -172,7 +179,7 @@ class TestStorageServiceMemoryLeaks:
                         )
                         failed_downloads.append(failed_download)
 
-                    result = await storage_service._generate_work_plan(
+                    result = await storage_service._generate_recovery_plan(
                         unavailable_videos, failed_downloads
                     )
                     assert result is not None
@@ -183,13 +190,15 @@ class TestStorageServiceMemoryLeaks:
 
                     time.sleep(1.0)
 
-                # Verify work plan files were created
-                work_plan_files = list(storage_service.work_plans_dir.glob("*.json"))
-                assert len(work_plan_files) == 10
+                # Verify recovery plan files were created
+                recovery_plan_files = list(
+                    storage_service.recovery_plans_dir.glob("*.json")
+                )
+                assert len(recovery_plan_files) == 10
 
-                # Test work plan file verification (memory leak testing focus)
-                for work_plan_file in work_plan_files:
-                    with open(work_plan_file) as f:
+                # Test recovery plan file verification (memory leak testing focus)
+                for recovery_plan_file in recovery_plan_files:
+                    with open(recovery_plan_file) as f:
                         plan_data = json.load(f)
 
                     # Verify work plan data structure for memory leak testing

@@ -47,8 +47,8 @@ class VideoExistence(BaseModel):
     last_modified: Optional[datetime] = None
 
 
-class WorkPlanRequest(BaseModel):
-    """Request model for generating work plans."""
+class RecoveryPlanRequest(BaseModel):
+    """Request model for generating recovery plans."""
 
     unavailable_videos: List[UnavailableVideo] = []
     failed_downloads: List[FailedDownload] = []
@@ -79,7 +79,7 @@ class StorageService(BaseService):
         self.base_output_dir = Path("~/YTArchive").expanduser()
         self.metadata_dir = self.base_output_dir / "metadata"
         self.videos_dir = self.base_output_dir / "videos"
-        self.work_plans_dir = Path("logs/work_plans")
+        self.recovery_plans_dir = Path("logs/recovery_plans")
 
         # Create directories
         self._ensure_directories()
@@ -93,7 +93,7 @@ class StorageService(BaseService):
             self.metadata_dir / "videos",
             self.metadata_dir / "playlists",
             self.videos_dir,
-            self.work_plans_dir,
+            self.recovery_plans_dir,
         ]
 
         for directory in directories:
@@ -152,18 +152,18 @@ class StorageService(BaseService):
                     detail=f"Failed to get metadata: {str(e)}",
                 )
 
-        @self.app.post("/api/v1/storage/work-plan", tags=["Storage"])
-        async def generate_work_plan(request: WorkPlanRequest):
-            """Generate work plan for failed or unavailable videos."""
+        @self.app.post("/api/v1/storage/recovery", tags=["Storage"])
+        async def generate_recovery_plan(request: RecoveryPlanRequest):
+            """Generate recovery plan for failed or unavailable videos."""
             try:
-                result = await self._generate_work_plan(
+                result = await self._generate_recovery_plan(
                     request.unavailable_videos, request.failed_downloads
                 )
                 return ServiceResponse(success=True, data=result)
             except Exception as e:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to generate work plan: {str(e)}",
+                    detail=f"Failed to generate recovery plan: {str(e)}",
                 )
 
         @self.app.get("/api/v1/storage/stats", tags=["Storage"])
@@ -302,16 +302,16 @@ class StorageService(BaseService):
             "storage_info": storage_info,
         }
 
-    async def _generate_work_plan(
+    async def _generate_recovery_plan(
         self,
         unavailable_videos: List[UnavailableVideo],
         failed_downloads: List[FailedDownload],
     ) -> Dict[str, Any]:
-        """Generate work plan for failed or unavailable content."""
+        """Generate recovery plan for failed or unavailable content."""
         now = datetime.now(timezone.utc)
         plan_id = now.strftime("%Y%m%d_%H%M%S")
 
-        work_plan = {
+        recovery_plan = {
             "plan_id": plan_id,
             "created_at": now.isoformat(),
             "unavailable_videos": [
@@ -323,19 +323,19 @@ class StorageService(BaseService):
             "total_videos": len(unavailable_videos) + len(failed_downloads),
             "unavailable_count": len(unavailable_videos),
             "failed_count": len(failed_downloads),
-            "notes": f"Generated work plan for {len(unavailable_videos)} unavailable and {len(failed_downloads)} failed videos",
+            "notes": f"Generated recovery plan for {len(unavailable_videos)} unavailable and {len(failed_downloads)} failed videos",
         }
 
-        plan_file = self.work_plans_dir / f"{plan_id}_plan.json"
+        plan_file = self.recovery_plans_dir / f"{plan_id}_plan.json"
         with open(plan_file, "w", encoding="utf-8") as f:
-            json.dump(work_plan, f, indent=2)
+            json.dump(recovery_plan, f, indent=2)
 
         return {
             "plan_id": plan_id,
             "path": str(plan_file),
-            "total_videos": work_plan["total_videos"],
-            "unavailable_count": work_plan["unavailable_count"],
-            "failed_count": work_plan["failed_count"],
+            "total_videos": recovery_plan["total_videos"],
+            "unavailable_count": recovery_plan["unavailable_count"],
+            "failed_count": recovery_plan["failed_count"],
         }
 
     async def _get_storage_stats(self) -> StorageStats:
