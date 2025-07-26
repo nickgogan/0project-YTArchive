@@ -304,6 +304,53 @@ uv run pytest tests/memory/test_metadata_memory_leaks.py -m memory
 uv run pytest tests/memory/test_storage_memory_leaks.py -m memory
 ```
 
+#### Dual Memory Testing Approaches
+
+YTArchive implements **two complementary memory testing strategies** for comprehensive validation:
+
+##### 1. Master Orchestrator (Production-Grade Reporting)
+**File**: `tests/memory/run_memory_leak_tests.py`
+
+**Purpose**: Enterprise-grade test orchestration with professional reporting
+```bash
+# Run comprehensive memory analysis with detailed reports
+python tests/memory/run_memory_leak_tests.py
+```
+
+**Features:**
+- **Professional Reports**: JSON and text reports with timestamps
+- **Leak Classification**: Critical, High, Medium, Low severity levels
+- **Production Decisions**: Exit codes for automated CI/CD integration
+- **Comprehensive Analysis**: Cross-service memory pattern analysis
+- **Report Storage**: Timestamped reports saved to `tests/memory/reports/`
+
+**Use Cases:**
+- Production deployment validation
+- CI/CD pipeline integration
+- Management reporting and documentation
+- Pre-release comprehensive analysis
+
+##### 2. Simple Memory Profiler (Development-Focused)
+**File**: `tests/memory/test_simple_memory_leaks.py`
+
+**Purpose**: Lightweight memory profiling for development workflow
+```bash
+# Run as part of regular pytest suite
+uv run pytest tests/memory/test_simple_memory_leaks.py -m memory
+```
+
+**Features:**
+- **Quick Validation**: Simple pass/fail memory checks
+- **Development Integration**: Seamlessly integrated with pytest
+- **Basic Analysis**: Memory growth classification (OK, LOW, MEDIUM, HIGH)
+- **Real-time Feedback**: Immediate results during development
+
+**Use Cases:**
+- Daily development testing
+- Individual service debugging
+- Quick memory validation
+- Integration with development workflow
+
 #### Memory Test Categories
 - **Download Service Tests**: 8 comprehensive memory leak tests
 - **Metadata Service Tests**: 9 memory validation tests
@@ -318,6 +365,35 @@ All services have been rigorously tested and validated:
 - **Storage Service**: ~0.1 MB memory growth (excellent)
 - **Memory Cleanup**: All services properly clean up resources
 - **Production Status**: Zero memory leaks detected
+
+#### Memory Testing Best Practices
+
+**For Development:**
+```bash
+# Quick memory validation during development
+uv run pytest -m memory -v
+
+# Test specific service during debugging
+uv run pytest tests/memory/test_download_memory_leaks.py -m memory
+```
+
+**For Production Validation:**
+```bash
+# Comprehensive analysis with professional reports
+python tests/memory/run_memory_leak_tests.py
+
+# Check generated reports
+ls -la tests/memory/reports/
+cat tests/memory/reports/memory_leak_report_*.txt
+```
+
+**For CI/CD Integration:**
+```bash
+# Use exit codes for automated decisions
+python tests/memory/run_memory_leak_tests.py
+echo "Exit code: $?"
+# 0 = Success, 1 = Critical issues, 2 = High-severity issues
+```
 
 ### Test Suite Organization
 
