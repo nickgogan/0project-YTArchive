@@ -571,10 +571,12 @@ class JobsService(BaseService):
         ) as client:  # Longer timeout for playlists
             response = await client.get(metadata_url)
             if response.status_code == 200:
-                return response.json()["data"]
+                json_data = await response.json()
+                return json_data["data"]
             else:
+                response_text = await response.text()
                 raise Exception(
-                    f"Playlist metadata service error: {response.status_code} - {response.text}"
+                    f"Playlist metadata service error: {response.status_code} - {response_text}"
                 )
 
     async def _create_batch_video_jobs(
@@ -707,7 +709,11 @@ class JobsService(BaseService):
 
         if not executable_jobs:
             print("No executable jobs found in playlist")
-            return {"successful": 0, "failed": len(video_jobs)}
+            return {
+                "successful": 0,
+                "failed": len(video_jobs),
+                "total_jobs": len(video_jobs),
+            }
 
         print(
             f"Executing {len(executable_jobs)} video downloads with max_concurrent={max_concurrent}"

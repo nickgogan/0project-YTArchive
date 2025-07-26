@@ -664,14 +664,15 @@ async def test_fetch_playlist_metadata_success(
         ],
     }
 
-    mock_service_responses["metadata_fetch"].json.return_value = {
-        "data": mock_playlist_data
-    }
+    # Configure the mock response properly
+    mock_response = AsyncMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"data": mock_playlist_data}
 
     with patch("httpx.AsyncClient") as mock_client:
-        mock_client.return_value.__aenter__.return_value.get = mock_service_responses[
-            "metadata_fetch"
-        ]
+        mock_client.return_value.__aenter__.return_value.get.return_value = (
+            mock_response
+        )
 
         result = await jobs_service._fetch_playlist_metadata("PLtest123")
 
@@ -687,7 +688,9 @@ async def test_fetch_playlist_metadata_service_error(jobs_service: JobsService):
     """Test playlist metadata fetching with service error."""
     with patch("httpx.AsyncClient") as mock_client:
         # Mock service error response
-        mock_response = AsyncMock(status_code=404, text="Playlist not found")
+        mock_response = AsyncMock()
+        mock_response.status_code = 404
+        mock_response.text.return_value = "Playlist not found"
         mock_client.return_value.__aenter__.return_value.get.return_value = (
             mock_response
         )
@@ -992,7 +995,9 @@ async def test_store_playlist_results_success(
         # Cleanup
         results_file.unlink()
         if results_dir.exists():
-            results_dir.rmdir()
+            import shutil
+
+            shutil.rmtree(results_dir)
 
 
 @pytest.mark.service
@@ -1035,7 +1040,10 @@ async def test_store_playlist_results_with_errors(jobs_service: JobsService):
 
     # Cleanup
     results_file.unlink()
-    Path("playlist_results").rmdir()
+    import shutil
+
+    if Path("playlist_results").exists():
+        shutil.rmtree(Path("playlist_results"))
 
 
 @pytest.mark.service
@@ -1075,20 +1083,23 @@ async def test_process_playlist_download_full_workflow(
     mock_completed_job = AsyncMock()
     mock_completed_job.status = "COMPLETED"
 
-    mock_service_responses["metadata_fetch"].json.return_value = {
-        "data": mock_playlist_metadata
-    }
-    mock_service_responses["storage_save_metadata"].status_code = 200
+    # Configure proper mock responses
+    mock_metadata_response = AsyncMock()
+    mock_metadata_response.status_code = 200
+    mock_metadata_response.json.return_value = {"data": mock_playlist_metadata}
+
+    mock_storage_response = AsyncMock()
+    mock_storage_response.status_code = 200
 
     with patch("httpx.AsyncClient") as mock_client, patch.object(
         jobs_service, "_execute_job", return_value=mock_completed_job
     ):
-        mock_client.return_value.__aenter__.return_value.get = mock_service_responses[
-            "metadata_fetch"
-        ]
-        mock_client.return_value.__aenter__.return_value.post = mock_service_responses[
-            "storage_save_metadata"
-        ]
+        mock_client.return_value.__aenter__.return_value.get.return_value = (
+            mock_metadata_response
+        )
+        mock_client.return_value.__aenter__.return_value.post.return_value = (
+            mock_storage_response
+        )
 
         # Execute playlist download
         await jobs_service._process_playlist_download(playlist_job)
