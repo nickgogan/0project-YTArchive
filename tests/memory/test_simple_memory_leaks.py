@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import psutil
+import pytest
 
 # Add project root to path BEFORE importing services
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -77,6 +78,7 @@ class SimpleMemoryProfiler:
 class TestSimpleMemoryLeaks:
     """Simple memory leak tests for YTArchive services."""
 
+    @pytest.mark.memory
     def test_download_service_memory_usage(self):
         """Test Download Service memory usage."""
         profiler = SimpleMemoryProfiler("DownloadService")
@@ -130,6 +132,7 @@ class TestSimpleMemoryLeaks:
                 "MEDIUM",
             ], f"Download service memory usage too high: {result}"
 
+    @pytest.mark.memory
     def test_metadata_service_memory_usage(self):
         """Test Metadata Service memory usage."""
         profiler = SimpleMemoryProfiler("MetadataService")
@@ -163,11 +166,16 @@ class TestSimpleMemoryLeaks:
                 ]
             }
 
-            # Mock YouTube API properly
+            # Mock YouTube API chains properly
             with patch.object(service, "youtube") as mock_youtube:
-                mock_youtube.videos.return_value.list.return_value.execute.return_value = (
-                    mock_response
-                )
+                # Create proper mock chain for YouTube API
+                mock_execute = Mock()
+                mock_execute.return_value = mock_response
+                mock_list = Mock()
+                mock_list.return_value.execute = mock_execute
+                mock_videos = Mock()
+                mock_videos.return_value.list = mock_list
+                mock_youtube.videos = mock_videos
 
                 # Simulate multiple metadata requests
                 for i in range(50):
@@ -198,6 +206,7 @@ class TestSimpleMemoryLeaks:
                 "MEDIUM",
             ], f"Metadata service memory usage too high: {result}"
 
+    @pytest.mark.memory
     def test_storage_service_memory_usage(self):
         """Test Storage Service memory usage."""
         profiler = SimpleMemoryProfiler("StorageService")
@@ -266,6 +275,7 @@ class TestSimpleMemoryLeaks:
                 "MEDIUM",
             ], f"Storage service memory usage too high: {result}"
 
+    @pytest.mark.memory
     def test_service_cleanup_effectiveness(self):
         """Test that services properly clean up resources."""
         profiler = SimpleMemoryProfiler("ServiceCleanup")
@@ -306,6 +316,7 @@ class TestSimpleMemoryLeaks:
         result = profiler.stop()
         assert result in ["OK", "LOW"], f"Service cleanup ineffective: {result}"
 
+    @pytest.mark.memory
     def test_concurrent_operations_memory_usage(self):
         """Test memory usage under concurrent operations."""
         profiler = SimpleMemoryProfiler("ConcurrentOperations")
@@ -356,6 +367,7 @@ class TestSimpleMemoryLeaks:
             ], f"Concurrent operations memory usage too high: {result}"
 
 
+@pytest.mark.memory
 def test_memory_leak_summary():
     """Run all memory leak tests and provide summary."""
     print("\n" + "=" * 60)
@@ -421,7 +433,8 @@ def test_memory_leak_summary():
         print(f"\n❌ {failed} MEMORY LEAK TESTS FAILED!")
         print("⚠️ Review and fix issues before production deployment")
 
-    return failed == 0
+    # Assert all tests passed (pytest expects None return, not boolean)
+    assert failed == 0, f"{failed} memory leak tests failed - review and fix issues"
 
 
 if __name__ == "__main__":

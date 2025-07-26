@@ -27,12 +27,19 @@ class TestMetadataServiceMemoryLeaks:
         """Create metadata service instance."""
         settings = ServiceSettings(port=8001)
 
-        # Mock API key
+        # Mock API key and YouTube API client
         with patch.dict("os.environ", {"YOUTUBE_API_KEY": "test_api_key"}):
-            service = MetadataService("TestMetadataService", settings)
-            return service
+            with patch("googleapiclient.discovery.build") as mock_build:
+                # Create proper mock chain for YouTube API
+                mock_youtube = Mock()
+                mock_build.return_value = mock_youtube
+
+                service = MetadataService("TestMetadataService", settings)
+                service.youtube = mock_youtube  # Ensure the mock is attached
+                return service
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_single_video_metadata_memory_leak(self, detector, metadata_service):
         """Test memory leaks in single video metadata fetch."""
         detector.start_tracing()
@@ -66,10 +73,14 @@ class TestMetadataServiceMemoryLeaks:
                     ]
                 }
 
-                # Mock YouTube API client
-                metadata_service.youtube.videos.return_value.list.return_value.execute.return_value = (
-                    mock_response
-                )
+                # Mock YouTube API client properly
+                mock_execute = Mock()
+                mock_execute.return_value = mock_response
+                mock_list = Mock()
+                mock_list.return_value.execute = mock_execute
+                mock_videos = Mock()
+                mock_videos.return_value.list = mock_list
+                metadata_service.youtube.videos = mock_videos
 
                 # Fetch metadata
                 result = await metadata_service._get_video_metadata("test_video_123")
@@ -86,6 +97,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_cache_memory_leak(self, detector, metadata_service):
         """Test memory leaks in caching system."""
         detector.start_tracing()
@@ -113,15 +125,21 @@ class TestMetadataServiceMemoryLeaks:
                     ]
                 }
 
+                # Mock YouTube API client properly
+                mock_execute = Mock()
+                mock_list = Mock()
+                mock_list.return_value.execute = mock_execute
+                mock_videos = Mock()
+                mock_videos.return_value.list = mock_list
+                metadata_service.youtube.videos = mock_videos
+
                 # Fill cache with many entries
                 for i in range(100):
                     # Update mock response for each video
                     mock_response["items"][0]["id"] = f"cache_video_{i}"
                     mock_response["items"][0]["snippet"]["title"] = f"Cache Video {i}"
 
-                    metadata_service.youtube.videos.return_value.list.return_value.execute.return_value = (
-                        mock_response
-                    )
+                    mock_execute.return_value = mock_response
 
                     # Fetch metadata (should be cached)
                     await metadata_service._get_video_metadata(f"cache_video_{i}")
@@ -145,6 +163,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_batch_fetch_memory_leak(self, detector, metadata_service):
         """Test memory leaks in batch metadata fetch."""
         detector.start_tracing()
@@ -174,9 +193,14 @@ class TestMetadataServiceMemoryLeaks:
                         }
                     )
 
-                metadata_service.youtube.videos.return_value.list.return_value.execute.return_value = (
-                    mock_response
-                )
+                # Mock YouTube API client properly
+                mock_execute = Mock()
+                mock_execute.return_value = mock_response
+                mock_list = Mock()
+                mock_list.return_value.execute = mock_execute
+                mock_videos = Mock()
+                mock_videos.return_value.list = mock_list
+                metadata_service.youtube.videos = mock_videos
 
                 # Batch fetch metadata
                 video_ids = [f"batch_video_{i}" for i in range(50)]
@@ -190,6 +214,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_playlist_metadata_memory_leak(self, detector, metadata_service):
         """Test memory leaks in playlist metadata fetch."""
         detector.start_tracing()
@@ -225,13 +250,24 @@ class TestMetadataServiceMemoryLeaks:
                         }
                     )
 
-                # Mock API calls
-                metadata_service.youtube.playlists.return_value.list.return_value.execute.return_value = (
-                    mock_playlist_response
-                )
-                metadata_service.youtube.playlistItems.return_value.list.return_value.execute.return_value = (
-                    mock_items_response
-                )
+                # Mock API calls properly
+                # Mock playlists API
+                mock_playlist_execute = Mock()
+                mock_playlist_execute.return_value = mock_playlist_response
+                mock_playlist_list = Mock()
+                mock_playlist_list.return_value.execute = mock_playlist_execute
+                mock_playlists = Mock()
+                mock_playlists.return_value.list = mock_playlist_list
+                metadata_service.youtube.playlists = mock_playlists
+
+                # Mock playlistItems API
+                mock_items_execute = Mock()
+                mock_items_execute.return_value = mock_items_response
+                mock_items_list = Mock()
+                mock_items_list.return_value.execute = mock_items_execute
+                mock_playlist_items = Mock()
+                mock_playlist_items.return_value.list = mock_items_list
+                metadata_service.youtube.playlistItems = mock_playlist_items
 
                 # Fetch playlist metadata
                 result = await metadata_service._get_playlist_metadata("test_playlist")
@@ -245,6 +281,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_quota_management_memory_leak(self, detector, metadata_service):
         """Test memory leaks in quota management."""
         detector.start_tracing()
@@ -272,6 +309,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_api_error_handling_memory_leak(self, detector, metadata_service):
         """Test memory leaks in API error handling."""
         detector.start_tracing()
@@ -285,9 +323,14 @@ class TestMetadataServiceMemoryLeaks:
                 mock_response.status = 404
                 error = HttpError(mock_response, b"Not Found")
 
-                metadata_service.youtube.videos.return_value.list.return_value.execute.side_effect = (
-                    error
-                )
+                # Mock YouTube API client properly with error
+                mock_execute = Mock()
+                mock_execute.side_effect = error
+                mock_list = Mock()
+                mock_list.return_value.execute = mock_execute
+                mock_videos = Mock()
+                mock_videos.return_value.list = mock_list
+                metadata_service.youtube.videos = mock_videos
 
                 # Test error handling
                 for i in range(10):
@@ -307,6 +350,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_concurrent_requests_memory_leak(self, detector, metadata_service):
         """Test memory leaks with concurrent requests."""
         detector.start_tracing()
@@ -359,6 +403,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_cache_expiration_cleanup(self, detector, metadata_service):
         """Test that cache expiration doesn't cause memory leaks."""
         detector.start_tracing()
@@ -386,9 +431,14 @@ class TestMetadataServiceMemoryLeaks:
                     ]
                 }
 
-                metadata_service.youtube.videos.return_value.list.return_value.execute.return_value = (
-                    mock_response
-                )
+                # Mock YouTube API client properly
+                mock_execute = Mock()
+                mock_execute.return_value = mock_response
+                mock_list = Mock()
+                mock_list.return_value.execute = mock_execute
+                mock_videos = Mock()
+                mock_videos.return_value.list = mock_list
+                metadata_service.youtube.videos = mock_videos
 
                 # Add entries to cache
                 for i in range(50):
@@ -400,7 +450,13 @@ class TestMetadataServiceMemoryLeaks:
                 # Wait for expiration
                 await asyncio.sleep(2)
 
-                # Trigger cache cleanup by accessing a new key
+                # Trigger cache cleanup by accessing expired entries
+                for i in range(50):
+                    cache_key = f"video:expiration_video_{i}"
+                    # Access expired entry to trigger cleanup
+                    metadata_service._get_from_cache(cache_key)
+
+                # Also trigger cache cleanup by accessing a new key
                 await metadata_service._get_video_metadata("new_video_after_expiration")
 
                 # Verify expired entries were cleaned up
@@ -413,6 +469,7 @@ class TestMetadataServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_continuous_monitoring(self, detector, metadata_service):
         """Test continuous monitoring for memory leaks."""
         monitor = ResourceMonitor("MetadataService")

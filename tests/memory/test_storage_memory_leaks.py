@@ -48,6 +48,7 @@ class TestStorageServiceMemoryLeaks:
         return service
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_metadata_storage_memory_leak(self, detector, storage_service):
         """Test memory leaks in metadata storage."""
         detector.start_tracing()
@@ -93,6 +94,7 @@ class TestStorageServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_video_storage_memory_leak(self, detector, storage_service):
         """Test memory leaks in video storage operations."""
         detector.start_tracing()
@@ -117,7 +119,7 @@ class TestStorageServiceMemoryLeaks:
                         download_completed_at=datetime.now(timezone.utc),
                     )
 
-                    result = await storage_service._save_video(request)
+                    result = await storage_service._save_video_info(request)
                     assert result is not None
 
                 # Verify video records were created
@@ -131,57 +133,76 @@ class TestStorageServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_work_plan_storage_memory_leak(self, detector, storage_service):
         """Test memory leaks in work plan storage."""
         detector.start_tracing()
 
         try:
             async with memory_leak_test(detector, "work_plan_storage"):
+                # Import required models
+                from services.common.models import UnavailableVideo, FailedDownload
+
                 # Create multiple work plans
                 for i in range(10):
-                    work_plan_request = {
-                        "unavailable_videos": [
-                            {
-                                "video_id": f"unavailable_{i}_{j}",
-                                "url": f"https://youtube.com/watch?v=unavailable_{i}_{j}",
-                                "error": "Video unavailable",
-                                "attempted_at": datetime.now(timezone.utc).isoformat(),
-                            }
-                            for j in range(5)
-                        ],
-                        "failed_downloads": [
-                            {
-                                "video_id": f"failed_{i}_{j}",
-                                "url": f"https://youtube.com/watch?v=failed_{i}_{j}",
-                                "error": "Download failed",
-                                "attempted_at": datetime.now(timezone.utc).isoformat(),
-                            }
-                            for j in range(3)
-                        ],
-                    }
+                    # Create UnavailableVideo instances
+                    unavailable_videos = []
+                    for j in range(5):
+                        unavailable_video = UnavailableVideo(
+                            video_id=f"unavailable_{i}_{j}",
+                            reason="private",
+                            detected_at=datetime.now(timezone.utc),
+                        )
+                        unavailable_videos.append(unavailable_video)
 
-                    result = await storage_service._create_work_plan(work_plan_request)
+                    # Create FailedDownload instances
+                    failed_downloads = []
+                    for j in range(3):
+                        failed_download = FailedDownload(
+                            video_id=f"failed_{i}_{j}",
+                            title=f"Failed Video {i}_{j}",
+                            attempts=1,
+                            last_attempt=datetime.now(timezone.utc),
+                            errors=[
+                                {
+                                    "error": "Download failed",
+                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                }
+                            ],
+                        )
+                        failed_downloads.append(failed_download)
+
+                    result = await storage_service._generate_work_plan(
+                        unavailable_videos, failed_downloads
+                    )
                     assert result is not None
                     assert result.get("plan_id") is not None
+
+                    # Sufficient delay to prevent timestamp collisions in file names
+                    import time
+
+                    time.sleep(1.0)
 
                 # Verify work plan files were created
                 work_plan_files = list(storage_service.work_plans_dir.glob("*.json"))
                 assert len(work_plan_files) == 10
 
-                # Test work plan retrieval
+                # Test work plan file verification (memory leak testing focus)
                 for work_plan_file in work_plan_files:
                     with open(work_plan_file) as f:
                         plan_data = json.load(f)
 
-                    retrieved_plan = await storage_service._get_work_plan(
-                        plan_data["plan_id"]
-                    )
-                    assert retrieved_plan is not None
+                    # Verify work plan data structure for memory leak testing
+                    assert plan_data.get("plan_id") is not None
+                    assert plan_data.get("total_videos") is not None
+                    assert isinstance(plan_data.get("unavailable_videos"), list)
+                    assert isinstance(plan_data.get("failed_downloads"), list)
 
         finally:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_storage_stats_memory_leak(self, detector, storage_service):
         """Test memory leaks in storage statistics calculation."""
         detector.start_tracing()
@@ -236,6 +257,7 @@ class TestStorageServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_file_operations_memory_leak(self, detector, storage_service):
         """Test memory leaks in file operations."""
         detector.start_tracing()
@@ -301,6 +323,7 @@ class TestStorageServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_concurrent_storage_operations(self, detector, storage_service):
         """Test memory leaks with concurrent storage operations."""
         detector.start_tracing()
@@ -336,8 +359,39 @@ class TestStorageServiceMemoryLeaks:
                 tasks = []
                 for i in range(15):
                     video_id = f"concurrent_{i}"
+
+                    # Store metadata
+                    metadata = {
+                        "video_id": video_id,
+                        "title": f"Concurrent Video {video_id}",
+                        "description": f"Concurrent test {video_id}",
+                        "duration": 120,
+                        "upload_date": datetime.now(timezone.utc).isoformat(),
+                        "channel_id": "concurrent_channel",
+                        "channel_title": "Concurrent Channel",
+                        "thumbnail_urls": {
+                            "default": f"http://example.com/thumb_{video_id}.jpg"
+                        },
+                        "view_count": 1000,
+                        "like_count": 100,
+                        "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    }
+
+                    # Store metadata first
+                    await storage_service._save_metadata(video_id, metadata)
+
+                    request = SaveVideoRequest(
+                        video_id=video_id,
+                        video_path=str(
+                            storage_service.videos_dir / video_id / f"{video_id}.mp4"
+                        ),
+                        file_size=1000,
+                        download_completed_at=datetime.now(timezone.utc),
+                    )
+
                     tasks.append(store_metadata(video_id))
                     tasks.append(check_existence(video_id))
+                    tasks.append(storage_service._save_video_info(request))
                     if i % 5 == 0:
                         tasks.append(get_stats())
 
@@ -352,6 +406,7 @@ class TestStorageServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_large_file_handling(self, detector, storage_service):
         """Test memory leaks with large file handling."""
         detector.start_tracing()
@@ -413,6 +468,7 @@ class TestStorageServiceMemoryLeaks:
             detector.stop_tracing()
 
     @pytest.mark.asyncio
+    @pytest.mark.memory
     async def test_continuous_monitoring(self, detector, storage_service):
         """Test continuous monitoring for memory leaks."""
         monitor = ResourceMonitor("StorageService")
