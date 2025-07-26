@@ -7,9 +7,10 @@ YTArchive is a production-ready YouTube video archiving system that allows you t
 ## Features
 
 - **Video Downloads**: High-quality video downloads using yt-dlp
+- **Playlist Support**: Download entire playlists with concurrent processing (500+ videos)
 - **Metadata Extraction**: Comprehensive metadata collection from YouTube API
 - **Smart Storage**: Organized file storage with metadata persistence
-- **Work Plans**: Automatic retry mechanisms for failed downloads
+- **Recovery Plans**: Automatic retry mechanisms for failed downloads
 - **CLI Interface**: Rich terminal interface with progress tracking
 - **Production Ready**: Memory-tested and optimized for stable deployment
 
@@ -103,6 +104,34 @@ python cli/main.py recovery show PLAN_ID
 
 # Create a recovery plan for specific videos
 python cli/main.py recovery create https://www.youtube.com/watch?v=VIDEO_ID
+```
+
+#### Playlist Operations
+
+```bash
+# Download entire playlists (up to 500+ videos)
+python cli/main.py playlist download https://www.youtube.com/playlist?list=PLAYLIST_ID
+
+# Download playlist with quality selection
+python cli/main.py playlist download https://www.youtube.com/playlist?list=PLAYLIST_ID --quality 720p
+
+# Download playlist with concurrent processing (default: 3)
+python cli/main.py playlist download https://www.youtube.com/playlist?list=PLAYLIST_ID --max-concurrent 5
+
+# Download playlist metadata only
+python cli/main.py playlist download https://www.youtube.com/playlist?list=PLAYLIST_ID --metadata-only
+
+# Get playlist information
+python cli/main.py playlist info https://www.youtube.com/playlist?list=PLAYLIST_ID
+
+# Get playlist info in JSON format
+python cli/main.py playlist info https://www.youtube.com/playlist?list=PLAYLIST_ID --json
+
+# Check playlist download status
+python cli/main.py playlist status PLAYLIST_JOB_ID
+
+# Watch playlist download progress in real-time
+python cli/main.py playlist status PLAYLIST_JOB_ID --watch
 ```
 
 ## Advanced Usage

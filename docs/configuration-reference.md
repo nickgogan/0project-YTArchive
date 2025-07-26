@@ -400,7 +400,7 @@ services:
 paths:
   output: "./downloads"
   storage: "./storage"
-  work_plans: "./work_plans"
+  recovery_plans: "./recovery_plans"
   logs: "./logs"
   temp: "/tmp/ytarchive"
 
