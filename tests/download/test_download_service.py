@@ -395,6 +395,7 @@ class TestDownloadService:
             assert Path(task.output_path).exists()
             assert Path(task.output_path).is_dir()
 
+    @pytest.mark.unit
     def test_video_format_model(self):
         """Test VideoFormat model validation."""
         from services.download.main import VideoFormat
@@ -415,6 +416,7 @@ class TestDownloadService:
         assert video_format.resolution == "1080p"
         assert video_format.fps == 30
 
+    @pytest.mark.unit
     def test_download_request_model(self):
         """Test DownloadRequest model validation and defaults."""
         from services.download.main import DownloadRequest
@@ -428,6 +430,7 @@ class TestDownloadService:
         assert request.caption_languages == ["en"]  # default
         assert request.resume is True  # default
 
+    @pytest.mark.unit
     def test_download_status_enum(self):
         """Test DownloadStatus enum values."""
         from services.download.main import DownloadStatus

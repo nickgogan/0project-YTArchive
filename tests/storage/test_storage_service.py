@@ -343,6 +343,7 @@ async def test_error_handling_invalid_json(storage_service: StorageService):
         assert response.status_code == 422  # Validation error
 
 
+@pytest.mark.unit
 def test_storage_directory_creation(storage_service: StorageService):
     """Test that storage directories are created properly."""
     expected_dirs = [
@@ -357,6 +358,7 @@ def test_storage_directory_creation(storage_service: StorageService):
         assert directory.is_dir()
 
 
+@pytest.mark.unit
 def test_storage_service_initialization(temp_storage_dir):
     """Test StorageService initialization."""
     settings = ServiceSettings(port=8003)

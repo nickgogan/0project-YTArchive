@@ -79,6 +79,7 @@ def medium_playlist_metadata():
 class TestLargePlaylistOptimizations:
     """Test suite for large playlist optimization features."""
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_chunked_processing_for_large_playlist(
         self, jobs_service, large_playlist_metadata
@@ -118,6 +119,7 @@ class TestLargePlaylistOptimizations:
                 len(successful_jobs) == 150
             ), "All jobs should be successfully created"
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_no_chunking_for_medium_playlist(
         self, jobs_service, medium_playlist_metadata
@@ -149,6 +151,7 @@ class TestLargePlaylistOptimizations:
             assert len(result) == 50, "Should create jobs for all 50 videos"
             assert mock_create_job.call_count == 50
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_dynamic_concurrency_adjustment(self, jobs_service):
         """Test that concurrency is dynamically adjusted for large playlists."""
@@ -187,6 +190,7 @@ class TestLargePlaylistOptimizations:
                 assert "failed" in result
                 assert "total_jobs" in result
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_optimized_progress_updates(self, jobs_service):
         """Test that progress updates are optimized for large playlists."""
@@ -229,6 +233,7 @@ class TestLargePlaylistOptimizations:
                 ), "Progress updates should be called"
                 # The main validation is that the method completed successfully with large playlist logic
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_concurrent_job_creation_performance(self, jobs_service):
         """Test that concurrent job creation improves performance for large playlists."""
@@ -280,6 +285,7 @@ class TestLargePlaylistOptimizations:
                 execution_time < 0.5
             ), f"Concurrent execution should be faster, took {execution_time}s"
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_memory_cleanup_for_large_playlists(
         self, jobs_service, large_playlist_metadata
@@ -329,6 +335,7 @@ class TestLargePlaylistOptimizations:
                                     mock_execute.called
                                 ), "Download execution should be called"
 
+    @pytest.mark.performance
     def test_large_playlist_detection(self, jobs_service):
         """Test that large playlists are correctly detected."""
         # Test large playlist detection (100+ videos)
@@ -343,6 +350,7 @@ class TestLargePlaylistOptimizations:
         is_large = len(medium_videos) >= 100
         assert not is_large, "80 videos should not be detected as large playlist"
 
+    @pytest.mark.performance
     @pytest.mark.asyncio
     async def test_error_handling_in_large_playlists(self, jobs_service):
         """Test that error handling works correctly in large playlist optimizations."""

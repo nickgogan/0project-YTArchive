@@ -330,6 +330,7 @@ class TestMetadataService:
         # Verify responses are identical
         assert response1.json() == response2.json()
 
+    @pytest.mark.unit
     def test_duration_parsing(self, metadata_service: MetadataService):
         """Test YouTube duration string parsing."""
         assert metadata_service._parse_duration("PT3M33S") == 213  # 3m33s
@@ -339,6 +340,7 @@ class TestMetadataService:
         assert metadata_service._parse_duration("PT1H") == 3600  # 1h
         assert metadata_service._parse_duration("PT") == 0  # empty
 
+    @pytest.mark.unit
     def test_error_handling_missing_api_key(self):
         """Test error handling when API key is missing."""
         # Ensure API key is not set
@@ -350,6 +352,7 @@ class TestMetadataService:
         with pytest.raises(ValueError, match="YOUTUBE_API_KEY"):
             MetadataService("MetadataService", settings)
 
+    @pytest.mark.unit
     def test_quota_management_edge_cases(self, metadata_service: MetadataService):
         """Test quota management edge cases."""
         # Test quota check at limit

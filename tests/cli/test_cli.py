@@ -507,29 +507,34 @@ class TestAPIClient:
 class TestInputValidation:
     """Test input validation and error handling."""
 
+    @pytest.mark.unit
     def test_download_missing_video_id(self, runner):
         """Test download command without video ID."""
         result = runner.invoke(cli, ["download"])
         assert result.exit_code != 0
         assert "Missing argument" in result.output
 
+    @pytest.mark.unit
     def test_metadata_missing_video_id(self, runner):
         """Test metadata command without video ID."""
         result = runner.invoke(cli, ["metadata"])
         assert result.exit_code != 0
         assert "Missing argument" in result.output
 
+    @pytest.mark.unit
     def test_status_missing_job_id(self, runner):
         """Test status command without job ID."""
         result = runner.invoke(cli, ["status"])
         assert result.exit_code != 0
         assert "Missing argument" in result.output
 
+    @pytest.mark.unit
     def test_download_invalid_quality(self, runner):
         """Test download with invalid quality option."""
         result = runner.invoke(cli, ["download", "dQw4w9WgXcQ", "--quality", "invalid"])
         assert result.exit_code != 0
 
+    @pytest.mark.unit
     def test_logs_invalid_level(self, runner):
         """Test logs with invalid level option."""
         result = runner.invoke(cli, ["logs", "--level", "invalid"])
@@ -621,6 +626,7 @@ def mock_playlist_status_response():
 class TestPlaylistCommand:
     """Test playlist command functionality - CRITICAL PRIORITY ENTERPRISE COVERAGE."""
 
+    @pytest.mark.service
     def test_playlist_help(self, runner):
         """Test playlist command help display."""
         result = runner.invoke(cli, ["playlist", "--help"])
@@ -630,6 +636,7 @@ class TestPlaylistCommand:
         assert "info" in result.output
         assert "status" in result.output
 
+    @pytest.mark.service
     def test_playlist_download_help(self, runner):
         """Test playlist download command help."""
         result = runner.invoke(cli, ["playlist", "download", "--help"])
@@ -639,6 +646,7 @@ class TestPlaylistCommand:
         assert "--max-concurrent" in result.output
         assert "--metadata-only" in result.output
 
+    @pytest.mark.service
     def test_playlist_info_help(self, runner):
         """Test playlist info command help."""
         result = runner.invoke(cli, ["playlist", "info", "--help"])
@@ -646,6 +654,7 @@ class TestPlaylistCommand:
         assert "Get information about a YouTube playlist" in result.output
         assert "--json" in result.output
 
+    @pytest.mark.service
     def test_playlist_status_help(self, runner):
         """Test playlist status command help."""
         result = runner.invoke(cli, ["playlist", "status", "--help"])
@@ -657,6 +666,7 @@ class TestPlaylistCommand:
 class TestPlaylistDownloadCommand:
     """Test playlist download command functionality - CRITICAL PRIORITY ENTERPRISE COVERAGE."""
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_download_success(
         self,
@@ -691,6 +701,7 @@ class TestPlaylistDownloadCommand:
         mock_api.get_playlist_metadata.assert_called_once_with("PLtest123")
         mock_api.create_job.assert_called_once()
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_download_with_quality(
         self,
@@ -723,6 +734,7 @@ class TestPlaylistDownloadCommand:
         assert result.exit_code == 0
         assert "720p" in str(mock_api.create_job.call_args)
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_download_with_max_concurrent(
         self,
@@ -757,6 +769,7 @@ class TestPlaylistDownloadCommand:
         call_args = str(mock_api.create_job.call_args)
         assert "max_concurrent" in call_args
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_download_metadata_only(
         self,
@@ -791,6 +804,7 @@ class TestPlaylistDownloadCommand:
         assert "metadata_only" in call_args
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_download_invalid_url(self, mock_api_class, runner):
         """Test playlist download with invalid URL parsing."""
         mock_api = AsyncMock()
@@ -804,6 +818,7 @@ class TestPlaylistDownloadCommand:
         assert "Invalid playlist URL" in result.output
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_download_api_error(self, mock_api_class, runner):
         """Test playlist download with API error handling."""
         mock_api = AsyncMock()
@@ -818,6 +833,7 @@ class TestPlaylistDownloadCommand:
         assert result.exit_code == 0  # CLI handles gracefully
         assert "Failed to fetch playlist metadata" in result.output
 
+    @pytest.mark.service
     def test_playlist_download_missing_url(self, runner):
         """Test playlist download command without URL argument."""
         result = runner.invoke(cli, ["playlist", "download"])
@@ -828,6 +844,7 @@ class TestPlaylistDownloadCommand:
 class TestPlaylistInfoCommand:
     """Test playlist info command functionality - CRITICAL PRIORITY ENTERPRISE COVERAGE."""
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_info_success(
         self, mock_api_class, runner, mock_playlist_metadata
@@ -852,6 +869,7 @@ class TestPlaylistInfoCommand:
         # Verify API call
         mock_api.get_playlist_metadata.assert_called_once_with("PLtest123")
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_info_json_output(
         self, mock_api_class, runner, mock_playlist_metadata
@@ -881,6 +899,7 @@ class TestPlaylistInfoCommand:
         assert len(output_data["videos"]) == 3
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_info_api_error(self, mock_api_class, runner):
         """Test playlist info with API error handling."""
         mock_api = AsyncMock()
@@ -895,6 +914,7 @@ class TestPlaylistInfoCommand:
         assert "Failed to fetch playlist information" in result.output
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_info_invalid_url(self, mock_api_class, runner):
         """Test playlist info with invalid URL parsing."""
         mock_api = AsyncMock()
@@ -907,6 +927,7 @@ class TestPlaylistInfoCommand:
         assert result.exit_code == 0  # CLI handles gracefully
         assert "Invalid playlist URL" in result.output
 
+    @pytest.mark.service
     def test_playlist_info_missing_url(self, runner):
         """Test playlist info command without URL argument."""
         result = runner.invoke(cli, ["playlist", "info"])
@@ -917,6 +938,7 @@ class TestPlaylistInfoCommand:
 class TestPlaylistStatusCommand:
     """Test playlist status command functionality - CRITICAL PRIORITY ENTERPRISE COVERAGE."""
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_playlist_status_success(
         self, mock_api_class, runner, mock_playlist_status_response
@@ -939,6 +961,7 @@ class TestPlaylistStatusCommand:
         mock_api.get_job_status.assert_called_once_with("playlist-job-123")
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_status_completed(self, mock_api_class, runner):
         """Test playlist status for completed job."""
         mock_api = AsyncMock()
@@ -963,6 +986,7 @@ class TestPlaylistStatusCommand:
         assert "3/3" in result.output  # All videos completed
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_status_with_errors(self, mock_api_class, runner):
         """Test playlist status with failed videos."""
         mock_api = AsyncMock()
@@ -987,6 +1011,7 @@ class TestPlaylistStatusCommand:
         assert "Network error" in result.output
 
     @patch("cli.main.YTArchiveAPI")
+    @pytest.mark.service
     def test_playlist_status_job_not_found(self, mock_api_class, runner):
         """Test playlist status for non-existent job."""
         mock_api = AsyncMock()
@@ -1001,6 +1026,7 @@ class TestPlaylistStatusCommand:
             or "Failed to get job status" in result.output
         )
 
+    @pytest.mark.service
     def test_playlist_status_missing_job_id(self, runner):
         """Test playlist status command without job ID argument."""
         result = runner.invoke(cli, ["playlist", "status"])
@@ -1011,6 +1037,7 @@ class TestPlaylistStatusCommand:
 class TestPlaylistURLParsing:
     """Test playlist URL parsing and validation - CRITICAL PRIORITY ENTERPRISE COVERAGE."""
 
+    @pytest.mark.unit
     def test_standard_playlist_url_parsing(self):
         """Test parsing of standard playlist URLs."""
         from cli.main import _extract_playlist_id
@@ -1020,6 +1047,7 @@ class TestPlaylistURLParsing:
         playlist_id = _extract_playlist_id(url)
         assert playlist_id == "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"
 
+    @pytest.mark.unit
     def test_mixed_playlist_url_parsing(self):
         """Test parsing of mixed video/playlist URLs."""
         from cli.main import _extract_playlist_id
@@ -1029,6 +1057,7 @@ class TestPlaylistURLParsing:
         playlist_id = _extract_playlist_id(url)
         assert playlist_id == "PLtest123"
 
+    @pytest.mark.unit
     def test_invalid_url_parsing(self):
         """Test parsing of invalid URLs."""
         from cli.main import _extract_playlist_id
