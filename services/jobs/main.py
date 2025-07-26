@@ -3,7 +3,7 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -302,6 +302,28 @@ class JobsService(BaseService):
 
         return JobResponse(**job_data)
 
+    async def _update_job_progress(
+        self, job_id: str, progress_data: Dict[str, Any]
+    ) -> Optional[JobResponse]:
+        """Update job progress data without changing status."""
+        job_file = self.jobs_dir / f"{job_id}.json"
+        if not job_file.exists():
+            return None
+
+        # Read current job data
+        with open(job_file, "r") as f:
+            job_data = json.load(f)
+
+        # Update progress data and timestamp
+        job_data["progress"] = progress_data
+        job_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+        # Save updated job data
+        with open(job_file, "w") as f:
+            json.dump(job_data, f, indent=2)
+
+        return JobResponse(**job_data)
+
     async def _process_job(self, job: JobResponse):
         """Process a job by coordinating with appropriate services."""
         if job.job_type == JobType.VIDEO_DOWNLOAD:
@@ -345,8 +367,30 @@ class JobsService(BaseService):
     async def _process_playlist_download(self, job: JobResponse):
         """Process playlist download job by expanding playlist and creating batch download jobs."""
         playlist_results = []
+        total_videos_across_playlists = 0
+        completed_videos = 0
+        failed_videos = 0
+        start_time = datetime.now(timezone.utc)
 
-        for url in job.urls:
+        # Initialize progress tracking
+        await self._update_job_progress(
+            job.job_id,
+            {
+                "phase": "initializing",
+                "total_playlists": len(job.urls),
+                "processed_playlists": 0,
+                "total_videos": 0,
+                "completed_videos": 0,
+                "failed_videos": 0,
+                "current_playlist": None,
+                "start_time": start_time.isoformat(),
+                "estimated_completion": None,
+                "download_speed": 0.0,
+                "current_phase_details": "Initializing playlist processing...",
+            },
+        )
+
+        for playlist_index, url in enumerate(job.urls):
             try:
                 # Extract playlist ID from URL
                 playlist_id = self._extract_playlist_id(url)
@@ -355,6 +399,26 @@ class JobsService(BaseService):
 
                 print(f"Processing playlist {playlist_id} for job {job.job_id}")
 
+                # Update progress for metadata fetching
+                await self._update_job_progress(
+                    job.job_id,
+                    {
+                        "phase": "fetching_metadata",
+                        "total_playlists": len(job.urls),
+                        "processed_playlists": playlist_index,
+                        "total_videos": total_videos_across_playlists,
+                        "completed_videos": completed_videos,
+                        "failed_videos": failed_videos,
+                        "current_playlist": {
+                            "id": playlist_id,
+                            "url": url,
+                            "status": "fetching_metadata",
+                        },
+                        "start_time": start_time.isoformat(),
+                        "current_phase_details": f"Fetching metadata for playlist {playlist_id}...",
+                    },
+                )
+
                 # Fetch playlist metadata via Metadata service
                 playlist_metadata = await self._fetch_playlist_metadata(playlist_id)
 
@@ -362,17 +426,70 @@ class JobsService(BaseService):
                     raise ValueError(f"Playlist {playlist_id} is empty or unavailable")
 
                 videos = playlist_metadata["videos"]
+                total_videos_across_playlists += len(videos)
                 print(f"Found {len(videos)} videos in playlist {playlist_id}")
+
+                # Update progress with total video count
+                await self._update_job_progress(
+                    job.job_id,
+                    {
+                        "phase": "creating_jobs",
+                        "total_playlists": len(job.urls),
+                        "processed_playlists": playlist_index,
+                        "total_videos": total_videos_across_playlists,
+                        "completed_videos": completed_videos,
+                        "failed_videos": failed_videos,
+                        "current_playlist": {
+                            "id": playlist_id,
+                            "title": playlist_metadata.get("title", "Unknown Playlist"),
+                            "total_videos": len(videos),
+                            "status": "creating_jobs",
+                        },
+                        "start_time": start_time.isoformat(),
+                        "current_phase_details": f"Creating download jobs for {len(videos)} videos...",
+                    },
+                )
 
                 # Create individual download jobs for each video
                 video_jobs = await self._create_batch_video_jobs(
                     videos, job.options, f"playlist-{playlist_id}"
                 )
 
-                # Execute video downloads with concurrency control
-                playlist_result = await self._execute_playlist_downloads(
-                    video_jobs, job.options.get("max_concurrent", 3)
+                # Update progress for download execution
+                await self._update_job_progress(
+                    job.job_id,
+                    {
+                        "phase": "downloading",
+                        "total_playlists": len(job.urls),
+                        "processed_playlists": playlist_index,
+                        "total_videos": total_videos_across_playlists,
+                        "completed_videos": completed_videos,
+                        "failed_videos": failed_videos,
+                        "current_playlist": {
+                            "id": playlist_id,
+                            "title": playlist_metadata.get("title", "Unknown Playlist"),
+                            "total_videos": len(videos),
+                            "status": "downloading",
+                        },
+                        "start_time": start_time.isoformat(),
+                        "current_phase_details": f"Downloading {len(videos)} videos from playlist...",
+                    },
                 )
+
+                # Execute video downloads with concurrency control and progress tracking
+                playlist_result = await self._execute_playlist_downloads_with_progress(
+                    job.job_id,
+                    video_jobs,
+                    job.options.get("max_concurrent", 3),
+                    playlist_index,
+                    len(job.urls),
+                    total_videos_across_playlists,
+                    start_time,
+                )
+
+                # Update counters
+                completed_videos += playlist_result["successful"]
+                failed_videos += playlist_result["failed"]
 
                 playlist_results.append(
                     {
@@ -585,42 +702,105 @@ class JobsService(BaseService):
         playlist_options: Dict[str, Any],
         batch_prefix: str,
     ) -> List[Dict[str, Any]]:
-        """Create individual video download jobs for batch processing."""
+        """Create individual video download jobs for batch processing with large playlist optimizations."""
         video_jobs = []
 
-        for i, video in enumerate(videos):
-            try:
-                video_id = video.get("video_id")
-                if not video_id:
-                    print(
-                        f"Warning: Video {i+1} in playlist missing video_id, skipping"
-                    )
-                    continue
+        # Large playlist optimization: Dynamic concurrency and batch processing
+        total_videos = len(videos)
+        is_large_playlist = total_videos >= 100
 
-                # Create video URL from video_id
-                video_url = f"https://www.youtube.com/watch?v={video_id}"
+        # Optimize processing based on playlist size
+        if is_large_playlist:
+            print(
+                f"⚡ Large playlist detected ({total_videos} videos) - applying optimizations..."
+            )
 
-                # Create job request for individual video
-                video_job_request = CreateJobRequest(
-                    job_type=JobType.VIDEO_DOWNLOAD,
-                    urls=[video_url],
-                    options={
-                        **playlist_options,  # Inherit playlist options
-                        "playlist_context": {
-                            "batch_prefix": batch_prefix,
-                            "video_index": i + 1,
-                            "total_videos": len(videos),
-                            "video_title": video.get("title", "Unknown Title"),
-                            "video_duration": video.get("duration_seconds", 0),
-                        },
-                    },
+            # Process videos in chunks to manage memory usage
+            chunk_size = min(50, max(10, total_videos // 10))  # Adaptive chunk size
+            video_chunks = [
+                videos[i : i + chunk_size] for i in range(0, total_videos, chunk_size)
+            ]
+
+            print(
+                f"📦 Processing {total_videos} videos in {len(video_chunks)} chunks of ~{chunk_size} videos each"
+            )
+
+            for chunk_index, video_chunk in enumerate(video_chunks):
+                print(
+                    f"🔄 Processing chunk {chunk_index + 1}/{len(video_chunks)} ({len(video_chunk)} videos)"
                 )
 
-                # Create the actual job
-                created_job = await self._create_job(video_job_request)
+                chunk_jobs = await self._create_video_jobs_chunk(
+                    video_chunk,
+                    playlist_options,
+                    batch_prefix,
+                    chunk_index * chunk_size,
+                    total_videos,
+                )
+                video_jobs.extend(chunk_jobs)
 
-                video_jobs.append(
-                    {
+                # Brief pause between chunks to prevent overwhelming the system
+                if chunk_index < len(video_chunks) - 1:
+                    await asyncio.sleep(0.1)
+        else:
+            # Standard processing for smaller playlists
+            video_jobs = await self._create_video_jobs_chunk(
+                videos, playlist_options, batch_prefix, 0, total_videos
+            )
+
+        print(f"✅ Created {len(video_jobs)} video jobs for playlist {batch_prefix}")
+        return video_jobs
+
+    async def _create_video_jobs_chunk(
+        self,
+        videos: List[Dict[str, Any]],
+        playlist_options: Dict[str, Any],
+        batch_prefix: str,
+        start_index: int,
+        total_videos: int,
+    ) -> List[Any]:
+        """Create video jobs for a chunk of videos with optimized processing."""
+        video_jobs = []
+
+        # Concurrent job creation for better performance
+        semaphore = asyncio.Semaphore(
+            min(10, len(videos))
+        )  # Limit concurrent job creation
+
+        async def create_single_video_job(i: int, video: Dict[str, Any]):
+            """Create a single video job with error handling."""
+            async with semaphore:
+                try:
+                    video_id = video.get("video_id")
+                    if not video_id:
+                        print(
+                            f"Warning: Video {start_index + i + 1} in playlist missing video_id, skipping"
+                        )
+                        return None
+
+                    # Create video URL from video_id
+                    video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+                    # Create job request for individual video
+                    video_job_request = CreateJobRequest(
+                        job_type=JobType.VIDEO_DOWNLOAD,
+                        urls=[video_url],
+                        options={
+                            **playlist_options,  # Inherit playlist options
+                            "playlist_context": {
+                                "batch_prefix": batch_prefix,
+                                "video_index": start_index + i + 1,
+                                "total_videos": total_videos,
+                                "video_title": video.get("title", "Unknown Title"),
+                                "video_duration": video.get("duration_seconds", 0),
+                            },
+                        },
+                    )
+
+                    # Create the actual job
+                    created_job = await self._create_job(video_job_request)
+
+                    return {
                         "job_id": created_job.job_id,
                         "video_id": video_id,
                         "video_url": video_url,
@@ -630,28 +810,47 @@ class JobsService(BaseService):
                         "created_job": created_job,
                         "status": "created",
                     }
-                )
 
-                print(
-                    f"Created job {created_job.job_id} for video {i+1}/{len(videos)}: {video.get('title', video_id)}"
-                )
-
-            except Exception as e:
-                print(
-                    f"Failed to create job for video {i+1} ({video.get('video_id', 'unknown')}): {e}"
-                )
-                video_jobs.append(
-                    {
-                        "video_id": video.get("video_id", "unknown"),
+                except Exception as e:
+                    print(
+                        f"Failed to create job for video {start_index + i + 1}/{total_videos}: {e}"
+                    )
+                    return {
+                        "video_id": video.get("video_id", f"unknown_{i}"),
+                        "video_url": f"https://www.youtube.com/watch?v={video.get('video_id', '')}",
                         "title": video.get("title", "Unknown Title"),
-                        "error": str(e),
+                        "duration": video.get("duration_seconds", 0),
                         "status": "failed_creation",
+                        "error": str(e),
                     }
-                )
 
-        print(
-            f"Created {len([job for job in video_jobs if job.get('job_id')])} jobs from {len(videos)} videos"
+        # Create all video jobs concurrently
+        job_tasks = [
+            create_single_video_job(i, video) for i, video in enumerate(videos)
+        ]
+        job_results = await asyncio.gather(*job_tasks, return_exceptions=True)
+
+        # Filter out None results and exceptions
+        for result in job_results:
+            if result is not None and not isinstance(result, Exception):
+                video_jobs.append(result)
+
+        successful_jobs = len(
+            [
+                job
+                for job in video_jobs
+                if isinstance(job, dict) and job.get("status") == "created"
+            ]
         )
+        failed_jobs = len(
+            [
+                job
+                for job in video_jobs
+                if isinstance(job, dict) and job.get("status") == "failed_creation"
+            ]
+        )
+
+        print(f"📊 Chunk complete: {successful_jobs} jobs created, {failed_jobs} failed")
         return video_jobs
 
     async def _execute_playlist_downloads(
@@ -731,6 +930,267 @@ class JobsService(BaseService):
 
         print(
             f"Playlist download completed: {successful_downloads} successful, {failed_downloads} failed"
+        )
+
+        return {
+            "successful": successful_downloads,
+            "failed": failed_downloads,
+            "total_jobs": len(video_jobs),
+        }
+
+    async def _execute_playlist_downloads_with_progress(
+        self,
+        job_id: str,
+        video_jobs: List[Dict[str, Any]],
+        max_concurrent: int = 3,
+        playlist_index: int = 0,
+        total_playlists: int = 1,
+        total_videos_across_playlists: int = 0,
+        start_time: Optional[datetime] = None,
+    ) -> Dict[str, int]:
+        """Execute video downloads concurrently with real-time progress tracking and large playlist optimizations."""
+        if start_time is None:
+            start_time = datetime.now(timezone.utc)
+
+        # Large playlist optimization: Dynamic concurrency adjustment
+        total_videos = len(video_jobs)
+        is_large_playlist = total_videos >= 100
+
+        if is_large_playlist:
+            # Increase concurrency for large playlists while being conservative
+            optimized_concurrency = min(max_concurrent * 2, 8, total_videos // 10)
+            print(
+                f"⚡ Large playlist optimization: Increasing concurrency from {max_concurrent} to {optimized_concurrency}"
+            )
+            max_concurrent = max(optimized_concurrency, max_concurrent)
+
+        semaphore = asyncio.Semaphore(max_concurrent)
+        successful_downloads = 0
+        failed_downloads = 0
+        completed_downloads = 0
+
+        # Calculate ETA and download speed
+        def calculate_progress_metrics():
+            current_time = datetime.now(timezone.utc)
+            elapsed_seconds = (current_time - start_time).total_seconds()
+
+            if elapsed_seconds > 0 and completed_downloads > 0:
+                download_speed = (
+                    completed_downloads / elapsed_seconds
+                )  # downloads per second
+                remaining_downloads = len(executable_jobs) - completed_downloads
+                estimated_completion_seconds = (
+                    remaining_downloads / download_speed if download_speed > 0 else 0
+                )
+                estimated_completion = current_time + timedelta(
+                    seconds=estimated_completion_seconds
+                )
+            else:
+                download_speed = 0.0
+                estimated_completion = None
+
+            return download_speed, estimated_completion
+
+        async def execute_single_video_job_with_progress(job_info: Dict[str, Any]):
+            """Execute a single video download job with progress updates."""
+            nonlocal successful_downloads, failed_downloads, completed_downloads
+
+            # Skip jobs that failed during creation
+            if job_info.get("status") == "failed_creation":
+                failed_downloads += 1
+                completed_downloads += 1
+                return
+
+            async with semaphore:
+                try:
+                    job_id_video = job_info["job_id"]
+                    video_title = job_info.get(
+                        "title", job_info.get("video_id", "Unknown")
+                    )
+
+                    print(f"Starting download: {video_title} (job {job_id_video})")
+
+                    # Optimized progress updates for large playlists
+                    should_update_progress = True
+                    if is_large_playlist:
+                        # For large playlists, update progress less frequently to reduce overhead
+                        update_interval = max(
+                            5, total_videos // 20
+                        )  # Update every 5-50 videos depending on size
+                        should_update_progress = (
+                            completed_downloads % update_interval == 0
+                        ) or completed_downloads == len(executable_jobs)
+
+                    if should_update_progress:
+                        # Update progress with detailed metrics
+                        (
+                            download_speed,
+                            estimated_completion,
+                        ) = calculate_progress_metrics()
+
+                        await self._update_job_progress(
+                            job_id,
+                            {
+                                "phase": "downloading",
+                                "total_playlists": total_playlists,
+                                "processed_playlists": playlist_index,
+                                "total_videos": total_videos_across_playlists
+                                + len(executable_jobs),
+                                "completed_videos": completed_downloads,
+                                "failed_videos": failed_downloads,
+                                "current_playlist": {
+                                    "index": playlist_index + 1,
+                                    "videos_completed": completed_downloads,
+                                    "videos_total": len(executable_jobs),
+                                    "success_rate": (
+                                        successful_downloads / completed_downloads * 100
+                                    )
+                                    if completed_downloads > 0
+                                    else 0,
+                                },
+                                "start_time": start_time.isoformat()
+                                if start_time
+                                else None,
+                                "estimated_completion": estimated_completion.isoformat()
+                                if estimated_completion
+                                else None,
+                                "download_speed": round(
+                                    download_speed * 60, 2
+                                ),  # Convert to videos per minute
+                                "current_video": {
+                                    "title": video_title,
+                                    "video_id": job_info.get("video_id", ""),
+                                    "duration": job_info.get("duration", 0),
+                                    "index": job_info.get("job_request", {})
+                                    .get("options", {})
+                                    .get("playlist_context", {})
+                                    .get("video_index", 0),
+                                },
+                                "current_phase_details": f"Downloaded {successful_downloads}/{len(executable_jobs)} videos ({failed_downloads} failed)",
+                            },
+                        )
+
+                    # Execute the individual video job
+                    result = await self._execute_job(job_id_video)
+
+                    if result and result.status == JobStatus.COMPLETED:
+                        successful_downloads += 1
+                        job_info["status"] = "completed"
+                        job_info["result"] = result
+                        print(f"✅ Completed: {video_title}")
+                    else:
+                        failed_downloads += 1
+                        job_info["status"] = "failed"
+                        job_info["error"] = (
+                            result.error_details if result else "Job execution failed"
+                        )
+                        print(
+                            f"❌ Failed: {video_title} - {job_info.get('error', 'Unknown error')}"
+                        )
+
+                except Exception as e:
+                    failed_downloads += 1
+                    job_info["status"] = "failed"
+                    job_info["error"] = str(e)
+                    print(f"❌ Exception during {job_info.get('title', 'unknown')}: {e}")
+
+                finally:
+                    completed_downloads += 1
+
+                    # Update progress after completing video download
+                    download_speed, estimated_completion = calculate_progress_metrics()
+                    await self._update_job_progress(
+                        job_id,
+                        {
+                            "phase": "downloading",
+                            "total_playlists": total_playlists,
+                            "processed_playlists": playlist_index,
+                            "total_videos": total_videos_across_playlists,
+                            "completed_videos": completed_downloads,
+                            "failed_videos": failed_downloads,
+                            "current_video": {
+                                "title": video_title,
+                                "job_id": job_info.get("job_id"),
+                                "status": job_info.get("status", "unknown"),
+                            },
+                            "start_time": start_time.isoformat()
+                            if start_time
+                            else None,
+                            "estimated_completion": estimated_completion.isoformat()
+                            if estimated_completion
+                            else None,
+                            "download_speed": round(
+                                download_speed * 60, 2
+                            ),  # downloads per minute
+                            "progress_percentage": round(
+                                (completed_downloads / len(executable_jobs)) * 100, 1
+                            )
+                            if executable_jobs
+                            else 0,
+                            "current_phase_details": f"Completed {completed_downloads}/{len(executable_jobs)} videos ({successful_downloads} successful, {failed_downloads} failed)",
+                        },
+                    )
+
+        # Filter out jobs that have valid job_ids
+        executable_jobs = [job for job in video_jobs if job.get("job_id")]
+
+        if not executable_jobs:
+            print("No executable jobs found in playlist")
+            # Update final progress
+            await self._update_job_progress(
+                job_id,
+                {
+                    "phase": "completed",
+                    "total_playlists": total_playlists,
+                    "processed_playlists": playlist_index + 1,
+                    "total_videos": total_videos_across_playlists,
+                    "completed_videos": 0,
+                    "failed_videos": len(video_jobs),
+                    "start_time": start_time.isoformat(),
+                    "progress_percentage": 100,
+                    "current_phase_details": "No executable jobs found - playlist processing completed",
+                },
+            )
+            return {
+                "successful": 0,
+                "failed": len(video_jobs),
+                "total_jobs": len(video_jobs),
+            }
+
+        print(
+            f"Executing {len(executable_jobs)} video downloads with max_concurrent={max_concurrent}"
+        )
+
+        # Execute all jobs concurrently with semaphore control and progress tracking
+        tasks = [execute_single_video_job_with_progress(job) for job in executable_jobs]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Account for jobs that failed during creation
+        failed_creation_count = len(
+            [job for job in video_jobs if job.get("status") == "failed_creation"]
+        )
+        failed_downloads += failed_creation_count
+
+        print(
+            f"Playlist download completed: {successful_downloads} successful, {failed_downloads} failed"
+        )
+
+        # Final progress update for this playlist
+        download_speed, _ = calculate_progress_metrics()
+        await self._update_job_progress(
+            job_id,
+            {
+                "phase": "playlist_completed",
+                "total_playlists": total_playlists,
+                "processed_playlists": playlist_index + 1,
+                "total_videos": total_videos_across_playlists,
+                "completed_videos": completed_downloads,
+                "failed_videos": failed_downloads,
+                "start_time": start_time.isoformat(),
+                "download_speed": round(download_speed * 60, 2),  # downloads per minute
+                "progress_percentage": 100,
+                "current_phase_details": f"Playlist {playlist_index + 1}/{total_playlists} completed: {successful_downloads}/{len(executable_jobs)} videos successful",
+            },
         )
 
         return {

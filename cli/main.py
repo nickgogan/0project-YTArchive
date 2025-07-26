@@ -3,14 +3,23 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Any, Optional
 
 import click
 import httpx
 from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    DownloadColumn,
+    TransferSpeedColumn,
+    TimeRemainingColumn,
+)
 from rich.table import Table
+from rich.panel import Panel
+from rich.columns import Columns
 
 
 def safe_error_message(e) -> str:
@@ -1090,47 +1099,218 @@ def _display_playlist_job_status(job_status: Dict[str, Any]):
 
 
 async def _monitor_playlist_progress(api: YTArchiveAPI, job_id: str, total_videos: int):
-    """Monitor playlist download progress with a progress bar."""
+    """Monitor playlist download progress with rich real-time updates."""
+    from datetime import datetime, timezone
+
     with Progress(
         SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.1f}%",
+        "•",
+        DownloadColumn(),
+        "•",
+        TransferSpeedColumn(),
+        "•",
+        TimeRemainingColumn(),
         console=console,
+        expand=True,
     ) as progress:
-        task = progress.add_task(
-            f"Downloading {total_videos} videos...", total=total_videos
+        # Initialize progress task
+        main_task = progress.add_task(
+            "Initializing playlist processing...",
+            total=total_videos if total_videos > 0 else 100,
         )
+
+        last_update_time = datetime.now(timezone.utc)
 
         while True:
             try:
                 job_status = await api.get_job(job_id)
                 job_progress = job_status.get("progress", {})
+                current_time = datetime.now(timezone.utc)
 
-                completed = job_progress.get("completed_videos", 0)
-                failed = job_progress.get("failed_videos", 0)
-
-                progress.update(
-                    task,
-                    completed=completed,
-                    description=f"Downloaded: {completed}, Failed: {failed}",
+                # Extract rich progress data
+                phase = job_progress.get("phase", "unknown")
+                completed_videos = job_progress.get("completed_videos", 0)
+                failed_videos = job_progress.get("failed_videos", 0)
+                total_playlists = job_progress.get("total_playlists", 1)
+                processed_playlists = job_progress.get("processed_playlists", 0)
+                current_playlist = job_progress.get("current_playlist", {})
+                current_video = job_progress.get("current_video", {})
+                download_speed = job_progress.get("download_speed", 0.0)
+                progress_percentage = job_progress.get("progress_percentage", 0)
+                phase_details = job_progress.get(
+                    "current_phase_details", "Processing..."
                 )
+                estimated_completion = job_progress.get("estimated_completion")
 
+                # Update main progress bar
+                if phase == "downloading" and total_videos > 0:
+                    progress.update(
+                        main_task,
+                        completed=completed_videos + failed_videos,
+                        description=f"Downloading playlist videos ({completed_videos + failed_videos}/{total_videos})",
+                    )
+                elif progress_percentage > 0:
+                    progress.update(
+                        main_task,
+                        completed=progress_percentage,
+                        total=100,
+                        description=f"Processing playlists ({phase})",
+                    )
+                else:
+                    progress.update(main_task, description=phase_details)
+
+                # Display detailed status every few seconds or on phase changes
+                time_since_update = (current_time - last_update_time).total_seconds()
+                if time_since_update >= 5 or phase in [
+                    "fetching_metadata",
+                    "creating_jobs",
+                    "playlist_completed",
+                ]:
+                    last_update_time = current_time
+
+                    # Create status table
+                    status_table = Table(show_header=True, header_style="bold magenta")
+                    status_table.add_column("Metric", style="cyan", no_wrap=True)
+                    status_table.add_column("Value", style="white")
+
+                    # Add status rows
+                    status_table.add_row(
+                        "Phase",
+                        f"[bold yellow]{phase.replace('_', ' ').title()}[/bold yellow]",
+                    )
+                    status_table.add_row(
+                        "Playlists", f"{processed_playlists}/{total_playlists}"
+                    )
+
+                    if total_videos > 0:
+                        success_rate = (
+                            round(
+                                (completed_videos / (completed_videos + failed_videos))
+                                * 100,
+                                1,
+                            )
+                            if (completed_videos + failed_videos) > 0
+                            else 0
+                        )
+                        status_table.add_row(
+                            "Videos Completed",
+                            f"{completed_videos + failed_videos}/{total_videos}",
+                        )
+                        status_table.add_row(
+                            "Success Rate",
+                            f"[green]{success_rate}%[/green] ({completed_videos} successful, {failed_videos} failed)",
+                        )
+
+                    if download_speed > 0:
+                        status_table.add_row(
+                            "Download Speed", f"{download_speed:.1f} videos/min"
+                        )
+
+                    if estimated_completion:
+                        try:
+                            eta_dt = datetime.fromisoformat(
+                                estimated_completion.replace("Z", "+00:00")
+                            )
+                            eta_str = eta_dt.strftime("%H:%M:%S")
+                            status_table.add_row(
+                                "Est. Completion", f"[blue]{eta_str}[/blue]"
+                            )
+                        except (ValueError, TypeError):
+                            pass
+
+                    # Current playlist info
+                    if current_playlist:
+                        playlist_info = f"[bold]{current_playlist.get('title', current_playlist.get('id', 'Unknown'))}[/bold]"
+                        if "total_videos" in current_playlist:
+                            playlist_info += (
+                                f" ({current_playlist['total_videos']} videos)"
+                            )
+                        status_table.add_row("Current Playlist", playlist_info)
+
+                    # Current video info
+                    if current_video and current_video.get("title"):
+                        video_status = current_video.get("status", "unknown")
+                        video_info = f"[bold]{current_video['title']}[/bold] - [italic]{video_status}[/italic]"
+                        status_table.add_row("Current Video", video_info)
+
+                    # Create panels
+                    status_panel = Panel(
+                        status_table,
+                        title="[bold blue]Playlist Progress Status[/bold blue]",
+                        border_style="blue",
+                    )
+
+                    # Phase details panel
+                    details_panel = Panel(
+                        f"[italic]{phase_details}[/italic]",
+                        title="[bold green]Current Operation[/bold green]",
+                        border_style="green",
+                    )
+
+                    # Display panels
+                    console.print(Columns([status_panel, details_panel]))
+                    console.print("")
+
+                # Check for completion
                 if job_status["status"] in ["completed", "failed", "cancelled"]:
+                    # Final status display
                     if job_status["status"] == "completed":
+                        final_success_rate = (
+                            round((completed_videos / total_videos) * 100, 1)
+                            if total_videos > 0
+                            else 0
+                        )
                         console.print(
-                            f"[green]✅ Playlist download completed! {completed}/{total_videos} videos downloaded[/green]"
+                            Panel(
+                                f"[bold green]✅ Playlist download completed successfully![/bold green]\n\n"
+                                f"📊 Final Statistics:\n"
+                                f"   • Total Videos: {total_videos}\n"
+                                f"   • Successfully Downloaded: [green]{completed_videos}[/green]\n"
+                                f"   • Failed Downloads: [red]{failed_videos}[/red]\n"
+                                f"   • Success Rate: [bold]{final_success_rate}%[/bold]\n"
+                                f"   • Download Speed: {download_speed:.1f} videos/min",
+                                title="[bold green]🎉 Playlist Download Complete[/bold green]",
+                                border_style="green",
+                            )
                         )
                     elif job_status["status"] == "failed":
-                        console.print("[red]❌ Playlist download failed[/red]")
+                        error_details = job_status.get("error_details", "Unknown error")
+                        console.print(
+                            Panel(
+                                f"[bold red]❌ Playlist download failed[/bold red]\n\n"
+                                f"Error: {error_details}\n\n"
+                                f"Progress before failure:\n"
+                                f"   • Videos Completed: {completed_videos + failed_videos}/{total_videos}\n"
+                                f"   • Successful: {completed_videos}\n"
+                                f"   • Failed: {failed_videos}",
+                                title="[bold red]❌ Download Failed[/bold red]",
+                                border_style="red",
+                            )
+                        )
                     else:
-                        console.print("[yellow]⏹️ Playlist download cancelled[/yellow]")
+                        console.print(
+                            Panel(
+                                f"[bold yellow]⏹️ Playlist download was cancelled[/bold yellow]\n\n"
+                                f"Progress when cancelled:\n"
+                                f"   • Videos Completed: {completed_videos + failed_videos}/{total_videos}\n"
+                                f"   • Successful: {completed_videos}\n"
+                                f"   • Failed: {failed_videos}",
+                                title="[bold yellow]⏹️ Download Cancelled[/bold yellow]",
+                                border_style="yellow",
+                            )
+                        )
                     break
 
-                await asyncio.sleep(3)
+                await asyncio.sleep(2)  # More frequent updates for better UX
 
             except Exception as e:
                 console.print(
                     f"[red]❌ Error monitoring progress: {safe_error_message(e)}[/red]"
                 )
+                await asyncio.sleep(5)  # Wait longer on error
                 break
 
 
