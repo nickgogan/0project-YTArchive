@@ -1,0 +1,23 @@
+{
+  "job_id": "test_job_123",
+  "timestamp": "2025-07-26T17:32:38.798645+00:00",
+  "summary": {
+    "total_playlists": 1,
+    "successful_playlists": 1,
+    "failed_playlists": 0,
+    "total_videos": 3,
+    "total_successful_downloads": 2,
+    "total_failed_downloads": 1,
+    "overall_success_rate": 66.67
+  },
+  "playlist_results": [
+    {
+      "playlist_id": "PLtest123",
+      "playlist_title": "Test Playlist",
+      "total_videos": 3,
+      "successful_downloads": 2,
+      "failed_downloads": 1,
+      "processing_time": 120.5
+    }
+  ]
+}
