@@ -975,7 +975,7 @@ async def test_store_playlist_results_success(
         await jobs_service._store_playlist_results(job_id, playlist_results)
 
         # Check that results file was created
-        results_dir = Path("playlist_results")
+        results_dir = Path("logs/playlist_results")
         results_file = results_dir / f"playlist_{job_id}.json"
 
         assert results_file.exists()
@@ -1025,7 +1025,7 @@ async def test_store_playlist_results_with_errors(jobs_service: JobsService):
     await jobs_service._store_playlist_results(job_id, playlist_results)
 
     # Check stored results
-    results_file = Path("playlist_results") / f"playlist_{job_id}.json"
+    results_file = Path("logs/playlist_results") / f"playlist_{job_id}.json"
     assert results_file.exists()
 
     with open(results_file, "r") as f:
@@ -1042,8 +1042,8 @@ async def test_store_playlist_results_with_errors(jobs_service: JobsService):
     results_file.unlink()
     import shutil
 
-    if Path("playlist_results").exists():
-        shutil.rmtree(Path("playlist_results"))
+    if Path("logs/playlist_results").exists():
+        shutil.rmtree(Path("logs/playlist_results"))
 
 
 @pytest.mark.service
@@ -1105,7 +1105,7 @@ async def test_process_playlist_download_full_workflow(
         await jobs_service._process_playlist_download(playlist_job)
 
         # Verify playlist results file was created
-        results_file = Path("playlist_results") / "playlist_playlist-test-job.json"
+        results_file = Path("logs/playlist_results") / "playlist_playlist-test-job.json"
         assert results_file.exists()
 
         with open(results_file, "r") as f:
@@ -1117,4 +1117,4 @@ async def test_process_playlist_download_full_workflow(
 
         # Cleanup
         results_file.unlink()
-        Path("playlist_results").rmdir()
+        Path("logs/playlist_results").rmdir()

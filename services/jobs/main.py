@@ -1205,7 +1205,7 @@ class JobsService(BaseService):
         """Store playlist processing results for progress tracking and analysis."""
         try:
             # Create playlist results directory if it doesn't exist
-            playlist_results_dir = Path("playlist_results")
+            playlist_results_dir = Path("logs/playlist_results")
             playlist_results_dir.mkdir(exist_ok=True)
 
             # Generate comprehensive playlist summary

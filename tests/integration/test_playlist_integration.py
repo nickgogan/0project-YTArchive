@@ -68,7 +68,7 @@ async def storage_service(temp_storage_dir, service_settings):
     service.metadata_dir = Path(temp_storage_dir) / "metadata"
     service.videos_dir = Path(temp_storage_dir) / "videos"
     service.work_plans_dir = Path(temp_storage_dir) / "work_plans"
-    service.playlist_results_dir = Path(temp_storage_dir) / "playlist_results"
+    service.playlist_results_dir = Path(temp_storage_dir) / "logs/playlist_results"
     # Create directories
     for dir_path in [
         service.metadata_dir,
@@ -290,7 +290,7 @@ class TestPlaylistServiceCoordination:
         await jobs_service._store_playlist_results(job_id, playlist_results)
 
         # Verify local storage file creation
-        playlist_results_dir = Path("playlist_results")
+        playlist_results_dir = Path("logs/playlist_results")
         expected_file = playlist_results_dir / f"playlist_{job_id}.json"
 
         # Check if storage was attempted (file should exist or storage method called)
