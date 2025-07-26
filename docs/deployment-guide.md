@@ -149,7 +149,7 @@ cd /opt/ytarchive
 uv sync
 
 # Create configuration directories
-mkdir -p /opt/ytarchive/{logs,downloads,storage,work_plans}
+mkdir -p /opt/ytarchive/{logs,downloads,storage}
 ```
 
 ## Configuration
@@ -169,7 +169,7 @@ YTARCHIVE_MAX_CONCURRENT=5
 # Storage Configuration
 YTARCHIVE_OUTPUT_DIR=/opt/ytarchive/downloads
 YTARCHIVE_STORAGE_DIR=/opt/ytarchive/storage
-YTARCHIVE_WORK_PLANS_DIR=/opt/ytarchive/work_plans
+YTARCHIVE_WORK_PLANS_DIR=/opt/ytarchive/logs/work_plans
 
 # Service Ports
 YTARCHIVE_JOBS_PORT=8001

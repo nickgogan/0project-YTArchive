@@ -194,8 +194,13 @@ YTArchive/
 │   ├── metadata/       # JSON metadata files
 │   └── thumbnails/     # Video thumbnails
 ├── storage/            # Internal storage database
-├── logs/              # Application logs
-└── work_plans/        # Failed download recovery plans
+├── logs/              # Centralized operational logs
+│   ├── jobs/          # Job processing records
+│   ├── work_plans/    # Failed download recovery plans
+│   ├── error_reports/  # Error logging
+│   ├── failed_downloads/ # Failed download tracking
+│   ├── playlist_results/ # Playlist processing results
+│   └── runtime/       # Runtime logs
 ```
 
 ## Error Handling
@@ -489,7 +494,7 @@ curl http://localhost:8004/health  # Storage
 
 Reset all data:
 ```bash
-rm -rf downloads/ storage/ work_plans/ logs/
+rm -rf downloads/ storage/ logs/
 ```
 
 ## Best Practices

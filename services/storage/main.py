@@ -79,7 +79,7 @@ class StorageService(BaseService):
         self.base_output_dir = Path("~/YTArchive").expanduser()
         self.metadata_dir = self.base_output_dir / "metadata"
         self.videos_dir = self.base_output_dir / "videos"
-        self.work_plans_dir = Path("~/.ytarchive/data/work_plans").expanduser()
+        self.work_plans_dir = Path("logs/work_plans")
 
         # Create directories
         self._ensure_directories()
