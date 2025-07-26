@@ -19,6 +19,7 @@ dependencies = [
     "toml~=0.10.2",
     "structlog~=23.2.0",
     "rich~=13.7.0",
+    "psutil>=7.0.0",
 ]
 
 [project.optional-dependencies]
@@ -46,4 +47,12 @@ filterwarnings = [
 ]
 markers = [
     "performance: marks tests as performance benchmarks",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.21.2",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
 ]

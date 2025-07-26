@@ -70,7 +70,7 @@ run_tests() {
 
     # Install dependencies
     log "Installing dependencies..."
-    uv sync
+    uv sync --dev
 
     # Run all tests
     log "Running unit tests..."
