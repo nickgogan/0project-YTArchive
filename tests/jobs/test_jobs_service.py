@@ -172,7 +172,7 @@ async def test_job_file_persistence(jobs_service: JobsService):
         job_id = response.json()["job_id"]
 
         # Check that the job file was created
-        job_file = Path("jobs") / f"{job_id}.json"
+        job_file = Path("logs/jobs") / f"{job_id}.json"
         assert job_file.exists()
 
         # Verify the file contents
@@ -735,16 +735,17 @@ async def test_create_batch_video_jobs_success(jobs_service: JobsService):
     assert job1["video_url"] == "https://www.youtube.com/watch?v=vid1"
 
     # Check playlist context in job options
-    created_job = job1["created_job"]
-    playlist_context = created_job.options["playlist_context"]
+    assert "options" in job1
+    assert "playlist_context" in job1["options"]
+    playlist_context = job1["options"]["playlist_context"]
     assert playlist_context["batch_prefix"] == batch_prefix
     assert playlist_context["video_index"] == 1
     assert playlist_context["total_videos"] == 3
     assert playlist_context["video_title"] == "Video 1"
 
     # Check inherited options
-    assert created_job.options["quality"] == "1080p"
-    assert created_job.options["max_concurrent"] == 2
+    assert job1["options"]["quality"] == "1080p"
+    assert job1["options"]["max_concurrent"] == 2
 
 
 @pytest.mark.service
@@ -1080,8 +1081,19 @@ async def test_process_playlist_download_full_workflow(
     }
 
     # Mock successful job execution
-    mock_completed_job = AsyncMock()
-    mock_completed_job.status = "COMPLETED"
+    from services.common.models import JobStatus
+    from services.jobs.main import JobResponse
+
+    # Create a proper JobResponse mock
+    mock_completed_job = JobResponse(
+        job_id="mock-job-id",
+        job_type="VIDEO_DOWNLOAD",
+        status=JobStatus.COMPLETED,
+        urls=["https://example.com/video"],
+        created_at="2025-07-26T12:00:00Z",
+        updated_at="2025-07-26T12:00:00Z",
+        options={},
+    )
 
     # Configure proper mock responses
     mock_metadata_response = AsyncMock()

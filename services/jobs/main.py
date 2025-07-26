@@ -806,8 +806,16 @@ class JobsService(BaseService):
                         "video_url": video_url,
                         "title": video.get("title", "Unknown Title"),
                         "duration": video.get("duration_seconds", 0),
-                        "job_request": recovery_plan_request,
-                        "created_job": created_job,
+                        "options": {
+                            **playlist_options,
+                            "playlist_context": {
+                                "batch_prefix": batch_prefix,
+                                "video_index": start_index + i + 1,
+                                "total_videos": total_videos,
+                                "video_title": video.get("title", "Unknown Title"),
+                                "video_duration": video.get("duration_seconds", 0),
+                            },
+                        },
                         "status": "created",
                     }
 
@@ -878,9 +886,11 @@ class JobsService(BaseService):
                     )
 
                     print(f"Starting download: {video_title} (job {job_id})")
+                    print(f"DEBUG: job_info type before _execute_job: {type(job_info)}")
 
                     # Execute the individual video job
                     result = await self._execute_job(job_id)
+                    print(f"DEBUG: job_info type after _execute_job: {type(job_info)}")
 
                     if result and result.status == JobStatus.COMPLETED:
                         successful_downloads += 1
@@ -893,6 +903,8 @@ class JobsService(BaseService):
                         job_info["error"] = (
                             result.error_details if result else "Job execution failed"
                         )
+                        print("DEBUG: About to call job_info.get()")
+                        print(f"DEBUG: job_info type: {type(job_info)}")
                         print(
                             f"❌ Failed: {video_title} - {job_info.get('error', 'Unknown error')}"
                         )

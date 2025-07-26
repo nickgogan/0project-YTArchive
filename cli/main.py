@@ -953,15 +953,17 @@ async def _get_playlist_info(playlist_url: str, json_output: bool):
                 return
 
             # Get playlist metadata
-            console.print("[yellow]📊 Fetching playlist information...[/yellow]")
+            if not json_output:
+                console.print("[yellow]📊 Fetching playlist information...[/yellow]")
             playlist_metadata = await api.get_playlist_metadata(playlist_id)
 
             if not playlist_metadata:
-                console.print("[red]❌ Failed to fetch playlist metadata[/red]")
+                if not json_output:
+                    console.print("[red]❌ Failed to fetch playlist metadata[/red]")
                 return
 
             if json_output:
-                console.print(json.dumps(playlist_metadata, indent=2))
+                print(json.dumps(playlist_metadata, indent=2))
             else:
                 # Display playlist info in rich format
                 console.print(
@@ -1019,6 +1021,11 @@ async def _get_playlist_status(job_id: str, watch: bool):
                 while True:
                     job_status = await api.get_job(job_id)
 
+                    # Check if job exists
+                    if job_status is None:
+                        console.print(f"[red]❌ Job not found: {job_id}[/red]")
+                        break
+
                     # Display current status
                     _display_playlist_job_status(job_status)
 
@@ -1028,6 +1035,9 @@ async def _get_playlist_status(job_id: str, watch: bool):
                     await asyncio.sleep(2)
             else:
                 job_status = await api.get_job(job_id)
+                if job_status is None:
+                    console.print(f"[red]❌ Job not found: {job_id}[/red]")
+                    return
                 _display_playlist_job_status(job_status)
 
         except KeyboardInterrupt:
@@ -1092,6 +1102,13 @@ def _display_playlist_job_status(job_status: Dict[str, Any]):
             )
             if failed > 0:
                 status_info += f"\n[red]❌ Failed: {failed}[/red]"
+
+    # Display errors if present
+    errors = job_status.get("errors", [])
+    if errors:
+        status_info += "\n[red]🚨 Errors:[/red]"
+        for error in errors:
+            status_info += f"\n[red]  • {error}[/red]"
 
     console.print(
         Panel(status_info, title="[bold blue]🎵 Playlist Job Status[/bold blue]")
