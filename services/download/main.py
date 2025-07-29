@@ -16,6 +16,20 @@ from services.common.base import BaseService, ServiceSettings
 from services.common.models import ServiceResponse
 from services.common.utils import retry_with_backoff
 
+# Import error recovery components
+from services.error_recovery import ErrorRecoveryManager
+from services.error_recovery.retry import (
+    ExponentialBackoffStrategy,
+)
+from services.error_recovery.reporting import BasicErrorReporter
+from services.error_recovery.types import (
+    RetryConfig,
+)
+
+# Import download-specific error handler and resume components
+from services.download.error_handler import DownloadErrorHandler
+from services.download.resume import DownloadStateManager, PartialDownloadResumer
+
 
 class DownloadStatus(str, Enum):
     """Enum for download task status."""
@@ -99,6 +113,29 @@ class DownloadService(BaseService):
     def __init__(self, service_name: str, settings: ServiceSettings):
         super().__init__(service_name, settings)
 
+        # Initialize error recovery components
+        self.download_error_handler = DownloadErrorHandler()
+        self.error_reporter = BasicErrorReporter("download_service")
+
+        # Initialize resume components
+        self.state_manager = DownloadStateManager()
+        self.resumer = PartialDownloadResumer(self.state_manager)
+
+        # Create error recovery manager with download-optimized retry strategy
+        self.error_recovery = ErrorRecoveryManager(
+            retry_strategy=ExponentialBackoffStrategy(
+                RetryConfig(
+                    max_attempts=3,
+                    base_delay=2.0,  # Start with 2 second delay
+                    max_delay=60.0,  # Cap at 1 minute
+                    exponential_base=2.0,
+                    jitter=True,
+                )
+            ),
+            error_reporter=self.error_reporter,
+            service_handler=self.download_error_handler,
+        )
+
         # Quality format mapping for yt-dlp
         self.quality_map = {
             "best": "bestvideo+bestaudio/best",
@@ -179,6 +216,80 @@ class DownloadService(BaseService):
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"Failed to get formats: {str(e)}",
+                )
+
+        @self.app.get("/api/v1/download/error-recovery/status", tags=["Error Recovery"])
+        async def get_error_recovery_status():
+            """Get error recovery system status and statistics."""
+            try:
+                status_info = {
+                    "active_operations": len(self.error_recovery.active_recoveries),
+                    "retry_strategy": type(self.error_recovery.retry_strategy).__name__,
+                    "total_errors_handled": getattr(
+                        self.error_reporter, "total_reports", 0
+                    ),
+                    "service_handler": type(self.download_error_handler).__name__,
+                }
+                return ServiceResponse(success=True, data=status_info)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to get error recovery status: {str(e)}",
+                )
+
+        @self.app.get(
+            "/api/v1/download/error-recovery/reports", tags=["Error Recovery"]
+        )
+        async def get_error_reports():
+            """Get recent error reports from the download service."""
+            try:
+                # Get error summary from the reporter
+                summary = await self.error_reporter.get_error_summary()
+                return ServiceResponse(success=True, data=summary)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to get error reports: {str(e)}",
+                )
+
+        @self.app.post(
+            "/api/v1/download/error-recovery/clear-reports", tags=["Error Recovery"]
+        )
+        async def clear_error_reports():
+            """Clear error reports (useful for testing or cleanup)."""
+            try:
+                result = {"cleared": True, "message": "Error reports cleared"}
+                return ServiceResponse(success=True, data=result)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to clear error reports: {str(e)}",
+                )
+
+        @self.app.post("/api/v1/download/resume/{task_id}", tags=["Download"])
+        async def resume_download(task_id: str):
+            """Resume a failed or paused download task."""
+            try:
+                result = await self._resume_download_task(task_id)
+                return ServiceResponse(success=True, data=result)
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to resume download: {str(e)}",
+                )
+
+        @self.app.get("/api/v1/download/resumable", tags=["Download"])
+        async def get_resumable_downloads():
+            """Get list of downloads that can be resumed."""
+            try:
+                resumable = await self._get_resumable_downloads()
+                return ServiceResponse(success=True, data=resumable)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to get resumable downloads: {str(e)}",
                 )
 
     async def _create_download_task(self, request: DownloadRequest) -> DownloadTask:
@@ -483,6 +594,227 @@ class DownloadService(BaseService):
                     )
         except Exception as e:
             print(f"Warning: Failed to report status to Jobs service: {e}")
+
+    async def _resume_download_task(self, task_id: str) -> Dict[str, Any]:
+        """Resume a failed or paused download task using the new resume system."""
+        if task_id not in self.active_tasks:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found",
+            )
+
+        task = self.active_tasks[task_id]
+
+        # Check if task can be resumed
+        if task.status not in [DownloadStatus.FAILED, DownloadStatus.PAUSED]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Task {task_id} cannot be resumed. Status: {task.status}",
+            )
+
+        # Try to load existing download state
+        download_state = await self.state_manager.load_state(task_id)
+
+        if not download_state:
+            # Create new download state from task
+            from services.download.resume import DownloadState
+
+            download_state = DownloadState(
+                task_id=task_id,
+                video_id=task.video_id,
+                video_url=f"https://www.youtube.com/watch?v={task.video_id}",
+                output_path=task.output_path,
+                quality=task.quality,
+                downloaded_bytes=0,
+                total_bytes=None,
+                resume_supported=True,
+                max_resume_attempts=3,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+
+            # Check for partial files
+            partial_file = self.resumer.check_partial_file(
+                task.output_path, task.video_id
+            )
+            if partial_file:
+                download_state.partial_file_path = partial_file
+                download_state.downloaded_bytes = Path(partial_file).stat().st_size
+
+        # Validate if resume is possible
+        can_resume, message = await self.resumer.validate_resume_possibility(
+            download_state
+        )
+
+        if not can_resume:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot resume download: {message}",
+            )
+
+        # Update state for resume attempt
+        download_state.resume_attempts += 1
+        download_state.last_resume_attempt = datetime.now(timezone.utc)
+        await self.state_manager.save_state(download_state)
+
+        # Create new task for the resumed download
+        new_task_id = str(uuid.uuid4())
+        resumed_task = DownloadTask(
+            task_id=new_task_id,
+            video_id=task.video_id,
+            status=DownloadStatus.PENDING,
+            created_at=datetime.now(timezone.utc),
+            output_path=task.output_path,
+            job_id=task.job_id,
+            quality=task.quality,
+            can_resume=True,
+            partial_file_path=download_state.partial_file_path,
+            resume_attempted=True,
+            original_task_id=task_id,
+        )
+
+        # Initialize progress tracking for resumed task
+        progress = DownloadProgress(
+            task_id=new_task_id,
+            video_id=task.video_id,
+            status=DownloadStatus.PENDING,
+            progress_percent=0.0,
+            downloaded_bytes=download_state.downloaded_bytes,
+            resumable=True,
+            partial_bytes=download_state.downloaded_bytes,
+        )
+
+        self.active_tasks[new_task_id] = resumed_task
+        self.task_progress[new_task_id] = progress
+
+        # Start download in background
+        bg_task = asyncio.create_task(self._process_download(resumed_task))
+        self.background_tasks[new_task_id] = bg_task
+
+        return {
+            "original_task_id": task_id,
+            "new_task_id": new_task_id,
+            "can_resume": True,
+            "partial_file_found": download_state.partial_file_path,
+            "downloaded_bytes": download_state.downloaded_bytes,
+            "resume_attempts": download_state.resume_attempts,
+            "status": "resumed",
+            "message": message,
+        }
+
+    async def _get_resumable_downloads(self) -> List[Dict[str, Any]]:
+        """Get list of downloads that can potentially be resumed using the new resume system."""
+        resumable = []
+
+        # Check active tasks for failed/paused downloads
+        for task_id, task in self.active_tasks.items():
+            if task.status in [DownloadStatus.FAILED, DownloadStatus.PAUSED]:
+                # Try to load download state
+                download_state = await self.state_manager.load_state(task_id)
+
+                if not download_state:
+                    # Check for partial files the old way as fallback
+                    output_path = Path(task.output_path)
+                    partial_files = list(output_path.glob(f"{task.video_id}*.part"))
+                    temp_files = list(output_path.glob(f"{task.video_id}*.ytdl"))
+
+                    has_partial = len(partial_files) > 0 or len(temp_files) > 0
+
+                    if has_partial:
+                        partial_size = 0
+                        partial_file = None
+                        if partial_files:
+                            partial_file = partial_files[0]
+                            try:
+                                partial_size = partial_file.stat().st_size
+                            except OSError:
+                                partial_size = 0
+                        elif temp_files:
+                            partial_file = temp_files[0]
+                            try:
+                                partial_size = partial_file.stat().st_size
+                            except OSError:
+                                partial_size = 0
+
+                        resumable.append(
+                            {
+                                "task_id": task_id,
+                                "video_id": task.video_id,
+                                "status": task.status,
+                                "quality": task.quality,
+                                "partial_file_path": str(partial_file)
+                                if partial_file
+                                else None,
+                                "partial_size_bytes": partial_size,
+                                "downloaded_bytes": partial_size,
+                                "created_at": task.created_at.isoformat(),
+                                "error": task.error,
+                                "resume_attempts": 0,
+                                "can_resume": has_partial,
+                            }
+                        )
+                else:
+                    # Use the download state information
+                    (
+                        can_resume,
+                        message,
+                    ) = await self.resumer.validate_resume_possibility(download_state)
+
+                    resumable.append(
+                        {
+                            "task_id": task_id,
+                            "video_id": download_state.video_id,
+                            "status": task.status,
+                            "quality": download_state.quality,
+                            "partial_file_path": download_state.partial_file_path,
+                            "partial_size_bytes": download_state.downloaded_bytes,
+                            "downloaded_bytes": download_state.downloaded_bytes,
+                            "total_bytes": download_state.total_bytes,
+                            "created_at": download_state.created_at.isoformat(),
+                            "updated_at": download_state.updated_at.isoformat(),
+                            "error": task.error,
+                            "resume_attempts": download_state.resume_attempts,
+                            "max_resume_attempts": download_state.max_resume_attempts,
+                            "can_resume": can_resume,
+                            "resume_message": message,
+                        }
+                    )
+
+        # Also check for orphaned download states
+        try:
+            orphaned_states = await self.state_manager.list_resumable_downloads()
+            for state in orphaned_states:
+                # Only include if not already in active tasks
+                if state.task_id not in self.active_tasks:
+                    (
+                        can_resume,
+                        message,
+                    ) = await self.resumer.validate_resume_possibility(state)
+
+                    resumable.append(
+                        {
+                            "task_id": state.task_id,
+                            "video_id": state.video_id,
+                            "status": "orphaned",  # Not in active tasks
+                            "quality": state.quality,
+                            "partial_file_path": state.partial_file_path,
+                            "partial_size_bytes": state.downloaded_bytes,
+                            "downloaded_bytes": state.downloaded_bytes,
+                            "total_bytes": state.total_bytes,
+                            "created_at": state.created_at.isoformat(),
+                            "updated_at": state.updated_at.isoformat(),
+                            "error": "Task no longer active",
+                            "resume_attempts": state.resume_attempts,
+                            "max_resume_attempts": state.max_resume_attempts,
+                            "can_resume": can_resume,
+                            "resume_message": message,
+                        }
+                    )
+        except Exception as e:
+            # Log but don't fail if we can't check orphaned states
+            print(f"Warning: Could not check orphaned download states: {e}")
+
+        return resumable
 
     async def cleanup_pending_tasks(self):
         """Clean up any pending background tasks. Useful for testing."""

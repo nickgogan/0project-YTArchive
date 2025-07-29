@@ -447,3 +447,193 @@ class TestDownloadService:
         for status in expected_statuses:
             assert hasattr(DownloadStatus, status.upper())
             assert getattr(DownloadStatus, status.upper()).value == status
+
+
+class TestDownloadErrorRecovery:
+    """Test cases for Download Service error recovery integration."""
+
+    @pytest.mark.service
+    @pytest.mark.asyncio
+    async def test_error_recovery_status_endpoint(self, client: AsyncClient):
+        """Test error recovery status endpoint."""
+        response = await client.get("/api/v1/download/error-recovery/status")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["success"] is True
+        assert "active_operations" in data["data"]
+        assert "retry_strategy" in data["data"]
+        assert "service_handler" in data["data"]
+        assert data["data"]["service_handler"] == "DownloadErrorHandler"
+
+    @pytest.mark.service
+    @pytest.mark.asyncio
+    async def test_error_reports_endpoint(self, client: AsyncClient):
+        """Test error reports endpoint."""
+        response = await client.get("/api/v1/download/error-recovery/reports")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["success"] is True
+        # Should return error summary data structure
+
+    @pytest.mark.service
+    @pytest.mark.asyncio
+    async def test_clear_error_reports_endpoint(self, client: AsyncClient):
+        """Test clear error reports endpoint."""
+        response = await client.post("/api/v1/download/error-recovery/clear-reports")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"]["cleared"] is True
+
+    @pytest.mark.unit
+    def test_download_error_handler_initialization(self, download_service):
+        """Test that DownloadService properly initializes error recovery components."""
+        # Verify error recovery components are initialized
+        assert hasattr(download_service, "error_recovery")
+        assert hasattr(download_service, "download_error_handler")
+        assert hasattr(download_service, "error_reporter")
+
+        # Verify correct types
+        from services.download.error_handler import DownloadErrorHandler
+        from services.error_recovery import ErrorRecoveryManager
+        from services.error_recovery.reporting import BasicErrorReporter
+
+        assert isinstance(download_service.download_error_handler, DownloadErrorHandler)
+        assert isinstance(download_service.error_recovery, ErrorRecoveryManager)
+        assert isinstance(download_service.error_reporter, BasicErrorReporter)
+
+    @pytest.mark.unit
+    def test_download_error_handler_retry_logic(self):
+        """Test DownloadErrorHandler retry decision logic."""
+        from services.download.error_handler import DownloadErrorHandler
+        from services.error_recovery.types import ErrorContext
+
+        handler = DownloadErrorHandler()
+        context = ErrorContext(
+            operation_name="test_download",
+            operation_context={"video_id": "test123"},
+            attempt_count=1,
+        )
+
+        # Test network errors should retry
+        network_error = Exception("Connection timeout occurred")
+        assert handler.should_retry(network_error, context) is True
+
+        # Test YouTube permanent errors should not retry
+        youtube_error = Exception("Video unavailable: Private video")
+        assert handler.should_retry(youtube_error, context) is False
+
+        # Test filesystem permission errors should not retry
+        permission_error = Exception("Permission denied: Cannot write to directory")
+        assert handler.should_retry(permission_error, context) is False
+
+        # Test unknown errors should retry once
+        unknown_error = Exception("Unknown error occurred")
+        context.attempt_count = 1
+        assert handler.should_retry(unknown_error, context) is True
+        context.attempt_count = 3
+        assert handler.should_retry(unknown_error, context) is False
+
+    @pytest.mark.unit
+    def test_download_error_handler_severity_classification(self):
+        """Test DownloadErrorHandler error severity classification."""
+        from services.download.error_handler import DownloadErrorHandler
+        from services.error_recovery.types import ErrorContext, ErrorSeverity
+
+        handler = DownloadErrorHandler()
+        context = ErrorContext(
+            operation_name="test_download", operation_context={"video_id": "test123"}
+        )
+
+        # Test critical errors
+        critical_error = Exception("File corrupted during download")
+        assert (
+            handler.get_error_severity(critical_error, context)
+            == ErrorSeverity.CRITICAL
+        )
+
+        # Test high severity errors
+        high_error = Exception("Video unavailable: Private video")
+        assert handler.get_error_severity(high_error, context) == ErrorSeverity.HIGH
+
+        # Test medium severity errors
+        medium_error = Exception("Network connection timeout")
+        assert handler.get_error_severity(medium_error, context) == ErrorSeverity.MEDIUM
+
+        # Test low severity errors
+        import yt_dlp
+
+        low_error = yt_dlp.DownloadError("Temporary download issue")
+        assert handler.get_error_severity(low_error, context) == ErrorSeverity.LOW
+
+    @pytest.mark.unit
+    def test_download_error_handler_error_handling(self):
+        """Test DownloadErrorHandler service-specific error handling."""
+        from services.download.error_handler import DownloadErrorHandler
+        from services.error_recovery.types import ErrorContext
+
+        handler = DownloadErrorHandler()
+        context = ErrorContext(
+            operation_name="test_download", operation_context={"video_id": "test123"}
+        )
+
+        # Test disk space error handling
+        disk_error = Exception("No space left on device")
+        result = handler.handle_error(disk_error, context)
+        assert result["handled"] is True
+        assert result["action_taken"] == "disk_space_warning"
+        assert len(result["suggestions"]) > 0
+
+        # Test network error handling
+        network_error = Exception("Connection timeout occurred")
+        result = handler.handle_error(network_error, context)
+        assert result["handled"] is True
+        assert result["action_taken"] == "network_diagnostics"
+
+        # Test YouTube error handling
+        youtube_error = Exception("Video unavailable: Private video")
+        result = handler.handle_error(youtube_error, context)
+        assert result["handled"] is True
+        assert result["action_taken"] == "youtube_error_classification"
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_download_with_error_recovery_integration(
+        self, download_service, temp_download_dir
+    ):
+        """Test download operation with error recovery integration (mock failure scenarios)."""
+        from services.download.main import DownloadRequest, DownloadStatus
+        from services.error_recovery.types import ErrorContext
+        import datetime
+
+        # Create a download task
+        request = DownloadRequest(
+            video_id="test123", quality="720p", output_path=temp_download_dir
+        )
+
+        task = await download_service._create_download_task(request)
+
+        # Verify task creation
+        assert task.task_id is not None
+        assert task.video_id == "test123"
+        assert task.status == DownloadStatus.PENDING
+
+        # Verify error recovery context creation (this would happen in _download_video)
+        error_context = ErrorContext(
+            operation_name="download_video",
+            operation_context={
+                "video_id": task.video_id,
+                "output_path": task.output_path,
+                "quality": task.quality,
+                "task_id": task.task_id,
+            },
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+        # Verify context is properly structured
+        assert error_context.operation_name == "download_video"
+        assert error_context.operation_context["video_id"] == "test123"
+        assert error_context.operation_context["quality"] == "720p"

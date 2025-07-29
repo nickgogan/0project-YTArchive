@@ -127,10 +127,36 @@ This document captures all architectural decisions and design choices made for t
 
 ## Error Handling & Recovery
 
-### Error Strategy
-- **Decision**: Automatic retries with exponential backoff, then manual intervention
-- **Rationale**: Balance automation with avoiding infinite loops
-- **Alternative Rejected**: Immediate failure (poor user experience)
+### Error Recovery Architecture
+- **Decision**: Hybrid error recovery library with service-specific implementations
+- **Implementation**: Central `services/error_recovery/` package providing shared components
+- **Components**:
+  - ErrorRecoveryManager: Central coordinator for retry logic
+  - Retry Strategies: Exponential backoff, circuit breaker, adaptive, fixed delay
+  - Error Reporting: Structured logging and diagnostics
+  - Service Integration: Abstract interfaces for service-specific handlers
+
+### Retry Strategy
+- **Decision**: Multiple retry strategies with configurable selection
+- **Available Strategies**:
+  - ExponentialBackoffStrategy: Standard exponential backoff with jitter
+  - CircuitBreakerStrategy: Fail-fast when error rates exceed thresholds
+  - AdaptiveStrategy: Dynamic adjustment based on success/failure patterns
+  - FixedDelayStrategy: Simple fixed-interval retries for predictable scenarios
+- **Configuration**: Per-operation retry limits, delays, and strategy selection
+- **Fallback**: Manual intervention after all automatic recovery attempts
+
+### Error Classification
+- **Decision**: Structured error severity and categorization
+- **Severities**: LOW, MEDIUM, HIGH, CRITICAL with appropriate escalation
+- **Error Context**: Capture operation details, timestamps, retry history
+- **Recovery Guidance**: Automated suggestions for common error patterns
+
+### Service Integration Pattern
+- **Decision**: Abstract interfaces with dependency injection
+- **Benefits**: Service-specific error handling while maintaining consistency
+- **Implementation**: Services implement ServiceErrorHandler interface
+- **Testing**: Comprehensive test coverage for all error recovery scenarios
 
 ## Logging & Monitoring
 
