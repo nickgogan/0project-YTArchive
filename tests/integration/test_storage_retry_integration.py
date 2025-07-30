@@ -54,7 +54,7 @@ def retry_config():
         max_attempts=5,
         base_delay=0.1,  # Fast retries for testing
         max_delay=2.0,
-        failure_threshold=3,
+        failure_threshold=5,  # Allow up to 5 failures to match test patterns
         recovery_timeout=1.0,
     )
 

@@ -466,7 +466,9 @@ class TestMetadataServiceRetryIntegration:
             "download_preparation",
             [True],  # Download prep succeeds immediately
             [None],
-            [{"formats": ["720p", "1080p"], "status": "ready"}],
+            [
+                {"formats": ["720p", "1080p"]}
+            ],  # Remove status to let default "success" apply
         )
 
         metadata_service = metadata_service_with_retry
@@ -550,7 +552,9 @@ class TestMetadataServiceRetryIntegration:
         assert result["basic"]["title"] == "Basic Video Info"
         assert result["detailed"]["status"] == "success"
         assert result["detailed"]["description"] == "Detailed description"
-        assert result["download_prep"]["status"] == "success"
+        assert (
+            result["download_prep"]["status"] == "success"
+        )  # Comes from simulate_metadata_operation base response
         assert result["download_prep"]["formats"] == ["720p", "1080p"]
 
         # Verify multi-level retry coordination

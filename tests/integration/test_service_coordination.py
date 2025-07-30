@@ -82,7 +82,7 @@ class TestServiceCoordination:
         job_request = CreateJobRequest(
             job_type=JobType.VIDEO_DOWNLOAD,
             urls=["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
-            options={"quality": "720p", "output_path": temp_storage_dir},
+            options={"quality": "720p", "output_path": str(temp_storage_dir)},
         )
         job_data = await jobs_service._create_job(job_request)
 
@@ -118,7 +118,7 @@ class TestServiceCoordination:
         updated_storage_state = await storage_service._check_video_exists(video_id)
         assert updated_storage_state.has_metadata
 
-        print("✅ Job creation and storage interaction test passed")
+        print(" Job creation and storage interaction test passed")
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -127,7 +127,7 @@ class TestServiceCoordination:
 
         # Step 1: Create a download task
         download_request = DownloadRequest(
-            video_id="test_video_123", output_path=temp_storage_dir, quality="720p"
+            video_id="test_video_123", output_path=str(temp_storage_dir), quality="720p"
         )
 
         # Mock storage service to avoid HTTP calls

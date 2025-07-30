@@ -144,7 +144,7 @@ class TestCompleteWorkflows:
         job_request = CreateJobRequest(
             job_type=JobType.VIDEO_DOWNLOAD,
             urls=[f"https://www.youtube.com/watch?v={video_id}"],
-            options={"quality": "720p", "output_path": temp_storage_dir},
+            options={"quality": "720p", "output_path": str(temp_storage_dir)},
         )
         job_data = await jobs_service._create_job(job_request)
 
@@ -268,11 +268,11 @@ class TestCompleteWorkflows:
 
         # Mock _get_storage_path to avoid HTTP calls
         with patch.object(
-            download_service, "_get_storage_path", return_value=temp_storage_dir
+            download_service, "_get_storage_path", return_value=str(temp_storage_dir)
         ):
             for video_id in video_ids:
                 request = DownloadRequest(
-                    video_id=video_id, output_path=temp_storage_dir
+                    video_id=video_id, output_path=str(temp_storage_dir)
                 )
                 task = await download_service._create_download_task(request)
                 tasks.append(task)
@@ -333,11 +333,13 @@ class TestErrorScenarios:
         download_service = running_services["download"]
 
         # Step 1: Start download
-        request = DownloadRequest(video_id="test_video", output_path=temp_storage_dir)
+        request = DownloadRequest(
+            video_id="test_video", output_path=str(temp_storage_dir)
+        )
 
         # Mock _get_storage_path to avoid HTTP calls
         with patch.object(
-            download_service, "_get_storage_path", return_value=temp_storage_dir
+            download_service, "_get_storage_path", return_value=str(temp_storage_dir)
         ):
             task = await download_service._create_download_task(request)
 

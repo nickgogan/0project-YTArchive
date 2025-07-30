@@ -57,7 +57,14 @@ class ErrorRecoveryManager:
         **kwargs,
     ):
         """Execute a function with retry logic."""
-        retry_config = retry_config or RetryConfig()
+        # Use strategy's config if no override provided
+        if retry_config is None:
+            strategy_config = getattr(self.retry_strategy, "config", None)
+            retry_config = (
+                strategy_config
+                if isinstance(strategy_config, RetryConfig)
+                else RetryConfig()
+            )
         operation_id = str(uuid.uuid4())
 
         self.active_recoveries[operation_id] = {
