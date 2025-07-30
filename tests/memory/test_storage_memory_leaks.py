@@ -2,7 +2,7 @@
 
 import asyncio
 import pytest
-import tempfile
+from tests.common.temp_utils import get_test_temp_dir
 import shutil
 import json
 from pathlib import Path
@@ -28,7 +28,7 @@ class TestStorageServiceMemoryLeaks:
     @pytest.fixture
     def temp_dir(self):
         """Create temporary directory for storage."""
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = get_test_temp_dir("storage_memory_test_")
         yield Path(temp_dir)
         shutil.rmtree(temp_dir)
 

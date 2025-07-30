@@ -2,9 +2,6 @@
 
 import asyncio
 import pytest
-import tempfile
-import shutil
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 from tests.memory_leak_detection import (
@@ -25,12 +22,7 @@ class TestDownloadServiceMemoryLeaks:
         """Create memory leak detector."""
         return MemoryLeakDetector("DownloadService")
 
-    @pytest.fixture
-    def temp_dir(self):
-        """Create temporary directory for downloads."""
-        temp_dir = tempfile.mkdtemp()
-        yield Path(temp_dir)
-        shutil.rmtree(temp_dir)
+    # Using centralized temp_dir fixture from tests.common.temp_utils
 
     @pytest.fixture
     def download_service(self, temp_dir):

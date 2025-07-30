@@ -3,7 +3,7 @@
 import gc
 import os
 import sys
-import tempfile
+from tests.common.temp_utils import get_test_temp_dir
 import time
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -213,9 +213,8 @@ class TestSimpleMemoryLeaks:
         profiler.start()
 
         # Create temporary directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-
+        temp_path = get_test_temp_dir("simple_memory_test_")
+        try:
             settings = ServiceSettings(port=8003)
             service = StorageService("TestStorageService", settings)
 
@@ -274,6 +273,12 @@ class TestSimpleMemoryLeaks:
                 "LOW",
                 "MEDIUM",
             ], f"Storage service memory usage too high: {result}"
+        finally:
+            # Clean up temporary directory
+            if temp_path.exists():
+                import shutil
+
+                shutil.rmtree(temp_path)
 
     @pytest.mark.memory
     def test_service_cleanup_effectiveness(self):

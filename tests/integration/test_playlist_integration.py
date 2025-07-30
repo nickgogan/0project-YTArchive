@@ -9,7 +9,7 @@ This module tests playlist-specific workflows across all YTArchive services:
 """
 
 import asyncio
-import tempfile
+from tests.common.temp_utils import temp_dir
 import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -26,11 +26,8 @@ from services.common.base import ServiceSettings
 from services.common.models import JobType, JobStatus
 
 
-@pytest.fixture
-def temp_storage_dir():
-    """Create temporary directory for playlist integration testing."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield temp_dir
+# Using centralized temp_dir fixture from tests.common.temp_utils
+temp_storage_dir = temp_dir  # Alias for backward compatibility
 
 
 @pytest.fixture

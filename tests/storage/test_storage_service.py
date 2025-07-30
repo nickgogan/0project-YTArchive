@@ -1,9 +1,8 @@
 """Tests for the StorageService."""
 
 import json
-import tempfile
+from tests.common.temp_utils import temp_dir
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -13,11 +12,8 @@ from services.common.models import UnavailableVideo, FailedDownload
 from services.storage.main import StorageService
 
 
-@pytest.fixture
-def temp_storage_dir():
-    """Create a temporary directory for storage testing."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield Path(temp_dir)
+# Using centralized temp_dir fixture from tests.common.temp_utils
+temp_storage_dir = temp_dir  # Alias for backward compatibility
 
 
 @pytest.fixture

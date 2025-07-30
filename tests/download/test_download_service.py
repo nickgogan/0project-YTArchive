@@ -1,6 +1,6 @@
 """Comprehensive tests for Download Service."""
 
-import tempfile
+from tests.common.temp_utils import temp_dir
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
@@ -46,11 +46,8 @@ def sample_video_info():
     }
 
 
-@pytest.fixture
-def temp_download_dir():
-    """Create temporary directory for downloads."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield temp_dir
+# Using centralized temp_dir fixture from tests.common.temp_utils
+temp_download_dir = temp_dir  # Alias for backward compatibility
 
 
 @pytest.fixture
@@ -423,8 +420,12 @@ class TestDownloadService:
     @pytest.mark.asyncio
     async def test_output_directory_creation(self, download_service: DownloadService):
         """Test that output directories are created."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            subdir = Path(temp_dir) / "new_subdir"
+        from tests.common.temp_utils import get_test_temp_dir
+        import shutil
+
+        temp_dir = get_test_temp_dir("download_output_test_")
+        try:
+            subdir = temp_dir / "new_subdir"
 
             from services.download.main import DownloadRequest
 
@@ -439,6 +440,10 @@ class TestDownloadService:
                 task = await download_service._create_download_task(request)
             assert Path(task.output_path).exists()
             assert Path(task.output_path).is_dir()
+        finally:
+            # Clean up temporary directory
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
 
     @pytest.mark.unit
     def test_video_format_model(self):

@@ -14,7 +14,6 @@ import gc
 import os
 import psutil
 import pytest
-import tempfile
 
 from services.error_recovery.base import ErrorRecoveryManager
 from services.error_recovery.retry.strategies import (
@@ -68,13 +67,6 @@ class MemoryProfiler:
 def memory_profiler():
     """Create memory profiler for tests."""
     return MemoryProfiler()
-
-
-@pytest.fixture
-def temp_dir():
-    """Create temporary directory for test files."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield temp_dir
 
 
 class TestAdaptiveStrategyMemoryLeaks:

@@ -1,7 +1,7 @@
 """Simplified integration tests focusing on service coordination."""
 
 import asyncio
-import tempfile
+from tests.common.temp_utils import temp_dir
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -17,11 +17,8 @@ from services.common.base import ServiceSettings
 from services.common.models import JobType, JobStatus
 
 
-@pytest.fixture
-def temp_storage_dir():
-    """Create temporary directory for integration testing."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield temp_dir
+# Using centralized temp_dir fixture from tests.common.temp_utils
+temp_storage_dir = temp_dir  # Alias for backward compatibility
 
 
 @pytest.fixture
