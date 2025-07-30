@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 
-from tests.memory_leak_detection import (
+from tests.memory.memory_leak_detection import (
     MemoryLeakDetector,
     memory_leak_test,
     ResourceMonitor,

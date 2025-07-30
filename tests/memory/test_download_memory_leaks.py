@@ -4,7 +4,7 @@ import asyncio
 import pytest
 from unittest.mock import Mock, patch
 
-from tests.memory_leak_detection import (
+from tests.memory.memory_leak_detection import (
     MemoryLeakDetector,
     memory_leak_test,
     ResourceMonitor,

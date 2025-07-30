@@ -1,6 +1,5 @@
 """Comprehensive tests for Download Service."""
 
-from tests.common.temp_utils import temp_dir
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
@@ -47,7 +46,10 @@ def sample_video_info():
 
 
 # Using centralized temp_dir fixture from tests.common.temp_utils
-temp_download_dir = temp_dir  # Alias for backward compatibility
+@pytest.fixture
+def temp_download_dir(temp_dir):
+    """Create temporary directory for downloads (string path)."""
+    return str(temp_dir)
 
 
 @pytest.fixture
