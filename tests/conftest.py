@@ -4,6 +4,9 @@ from httpx import AsyncClient
 
 from services.common.base import BaseService, ServiceSettings
 
+# Import centralized fixtures for pytest discovery
+from tests.common.temp_utils import temp_dir  # noqa: F401
+
 
 class MockService(BaseService):
     """A mock service for testing the base class."""
