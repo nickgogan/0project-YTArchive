@@ -274,6 +274,11 @@ class TestDownloadServiceMemoryLeaks:
                     async def __aexit__(self, exc_type, exc_val, exc_tb):
                         clients_closed.append(self)
 
+                    async def get(self, *args, **kwargs):
+                        mock_response = Mock()
+                        mock_response.status_code = 200
+                        return mock_response
+
                     async def post(self, *args, **kwargs):
                         mock_response = Mock()
                         mock_response.status_code = 200
@@ -311,44 +316,50 @@ class TestDownloadServiceMemoryLeaks:
 
         try:
             async with memory_leak_test(detector, "progress_tracking"):
-                # Create multiple tasks with progress tracking
-                task_ids = []
-                for i in range(20):
-                    request = DownloadRequest(
-                        video_id=f"progress_video_{i}",
-                        quality="720p",
-                        output_path="/tmp/test_output",
-                        job_id=f"progress_job_{i}",
-                    )
+                # Mock storage service calls to prevent real HTTP requests
+                with patch.object(
+                    download_service,
+                    "_get_storage_path",
+                    return_value="/tmp/test_storage",
+                ):
+                    # Create multiple tasks with progress tracking
+                    task_ids = []
+                    for i in range(20):
+                        request = DownloadRequest(
+                            video_id=f"progress_video_{i}",
+                            quality="720p",
+                            output_path="/tmp/test_output",
+                            job_id=f"progress_job_{i}",
+                        )
 
-                    task = await download_service._create_download_task(request)
-                    task_ids.append(task.task_id)
+                        task = await download_service._create_download_task(request)
+                        task_ids.append(task.task_id)
 
-                    # Simulate progress updates
-                    for progress in [10, 25, 50, 75, 100]:
-                        # Update progress directly in task_progress dict
-                        if task.task_id in download_service.task_progress:
-                            download_service.task_progress[
-                                task.task_id
-                            ].progress_percent = progress
-                            download_service.task_progress[
-                                task.task_id
-                            ].downloaded_bytes = (1000 * progress)
-                            download_service.task_progress[
-                                task.task_id
-                            ].total_bytes = 100000
+                        # Simulate progress updates
+                        for progress in [10, 25, 50, 75, 100]:
+                            # Update progress directly in task_progress dict
+                            if task.task_id in download_service.task_progress:
+                                download_service.task_progress[
+                                    task.task_id
+                                ].progress_percent = progress
+                                download_service.task_progress[
+                                    task.task_id
+                                ].downloaded_bytes = (1000 * progress)
+                                download_service.task_progress[
+                                    task.task_id
+                                ].total_bytes = 100000
 
-                # Verify progress tracking cleanup
-                for task_id in task_ids:
-                    # Simulate task completion
-                    if task_id in download_service.task_progress:
-                        del download_service.task_progress[task_id]
-                    if task_id in download_service.active_tasks:
-                        del download_service.active_tasks[task_id]
+                    # Verify progress tracking cleanup
+                    for task_id in task_ids:
+                        # Simulate task completion
+                        if task_id in download_service.task_progress:
+                            del download_service.task_progress[task_id]
+                        if task_id in download_service.active_tasks:
+                            del download_service.active_tasks[task_id]
 
-                # Verify cleanup
-                assert len(download_service.task_progress) == 0
-                assert len(download_service.active_tasks) == 0
+                    # Verify cleanup
+                    assert len(download_service.task_progress) == 0
+                    assert len(download_service.active_tasks) == 0
 
         finally:
             detector.stop_tracing()

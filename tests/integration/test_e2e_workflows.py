@@ -181,9 +181,15 @@ class TestCompleteWorkflows:
             "caption_languages": ["en"],
         }
 
-        download_task = await download_service._create_download_task(
-            DownloadRequest(**download_request)
-        )
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service,
+            "_get_storage_path",
+            return_value=str(Path(temp_storage_dir) / "videos"),
+        ):
+            download_task = await download_service._create_download_task(
+                DownloadRequest(**download_request)
+            )
         assert download_task.video_id == video_id
         assert download_task.status.value == "pending"
 
@@ -264,10 +270,16 @@ class TestCompleteWorkflows:
         video_ids = ["video1", "video2", "video3", "video4", "video5"]
         tasks = []
 
-        for video_id in video_ids:
-            request = DownloadRequest(video_id=video_id, output_path=temp_storage_dir)
-            task = await download_service._create_download_task(request)
-            tasks.append(task)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_storage_dir
+        ):
+            for video_id in video_ids:
+                request = DownloadRequest(
+                    video_id=video_id, output_path=temp_storage_dir
+                )
+                task = await download_service._create_download_task(request)
+                tasks.append(task)
 
         # Verify semaphore limits concurrent downloads
         assert download_service.download_semaphore._value == 3  # max concurrent
@@ -326,7 +338,12 @@ class TestErrorScenarios:
 
         # Step 1: Start download
         request = DownloadRequest(video_id="test_video", output_path=temp_storage_dir)
-        task = await download_service._create_download_task(request)
+
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_storage_dir
+        ):
+            task = await download_service._create_download_task(request)
 
         # Step 2: Cancel download
         cancel_result = await download_service._cancel_download_task(task.task_id)
@@ -449,9 +466,11 @@ class TestPerformanceMetrics:
         initial_task_count = len(download_service.active_tasks)
 
         # Create 20 tasks
-        for i in range(20):
-            request = DownloadRequest(video_id=f"load_test_{i}", output_path="/tmp")
-            await download_service._create_download_task(request)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(download_service, "_get_storage_path", return_value="/tmp"):
+            for i in range(20):
+                request = DownloadRequest(video_id=f"load_test_{i}", output_path="/tmp")
+                await download_service._create_download_task(request)
 
         # Verify tasks are tracked
         assert len(download_service.active_tasks) == initial_task_count + 20
@@ -560,7 +579,14 @@ class TestServiceIntegration:
         request = DownloadRequest(
             video_id=video_id, output_path=str(Path(temp_storage_dir) / "videos")
         )
-        await download_service._create_download_task(request)
+
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service,
+            "_get_storage_path",
+            return_value=str(Path(temp_storage_dir) / "videos"),
+        ):
+            await download_service._create_download_task(request)
 
         # Simulate video file creation
         video_file = Path(temp_storage_dir) / "videos" / f"{video_id}.mp4"

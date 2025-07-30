@@ -140,8 +140,13 @@ class TestDownloadService:
             "output_path": temp_download_dir,
         }
 
-        response = await client.post("/api/v1/download/video", json=request_data)
-        assert response.status_code == 200
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch(
+            "services.download.main.DownloadService._get_storage_path",
+            return_value=temp_download_dir,
+        ):
+            response = await client.post("/api/v1/download/video", json=request_data)
+            assert response.status_code == 200
 
         data = response.json()
         assert data["success"] is True
@@ -159,8 +164,14 @@ class TestDownloadService:
         # Create a task manually for testing
         from services.download.main import DownloadRequest
 
-        request = DownloadRequest(video_id="dQw4w9WgXcQ", output_path=temp_download_dir)
-        task = await download_service._create_download_task(request)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            request = DownloadRequest(
+                video_id="dQw4w9WgXcQ", output_path=temp_download_dir
+            )
+            task = await download_service._create_download_task(request)
 
         response = await client.get(f"/api/v1/download/progress/{task.task_id}")
         assert response.status_code == 200
@@ -193,8 +204,14 @@ class TestDownloadService:
         # Create a task manually for testing
         from services.download.main import DownloadRequest
 
-        request = DownloadRequest(video_id="dQw4w9WgXcQ", output_path=temp_download_dir)
-        task = await download_service._create_download_task(request)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            request = DownloadRequest(
+                video_id="dQw4w9WgXcQ", output_path=temp_download_dir
+            )
+            task = await download_service._create_download_task(request)
 
         response = await client.post(f"/api/v1/download/cancel/{task.task_id}")
         assert response.status_code == 200
@@ -226,8 +243,14 @@ class TestDownloadService:
         # Create and mark task as completed
         from services.download.main import DownloadRequest
 
-        request = DownloadRequest(video_id="dQw4w9WgXcQ", output_path=temp_download_dir)
-        task = await download_service._create_download_task(request)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            request = DownloadRequest(
+                video_id="dQw4w9WgXcQ", output_path=temp_download_dir
+            )
+            task = await download_service._create_download_task(request)
         task.status = DownloadStatus.COMPLETED
 
         response = await client.post(f"/api/v1/download/cancel/{task.task_id}")
@@ -292,15 +315,19 @@ class TestDownloadService:
         """Test creating a download task."""
         from services.download.main import DownloadRequest
 
-        request = DownloadRequest(
-            video_id="dQw4w9WgXcQ",
-            quality="720p",
-            output_path=temp_download_dir,
-            include_captions=True,
-            caption_languages=["en", "es"],
-        )
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            request = DownloadRequest(
+                video_id="dQw4w9WgXcQ",
+                quality="720p",
+                output_path=temp_download_dir,
+                include_captions=True,
+                caption_languages=["en", "es"],
+            )
 
-        task = await download_service._create_download_task(request)
+            task = await download_service._create_download_task(request)
 
         assert task.video_id == "dQw4w9WgXcQ"
         assert task.status == DownloadStatus.PENDING
@@ -338,8 +365,14 @@ class TestDownloadService:
 
         from services.download.main import DownloadRequest
 
-        request = DownloadRequest(video_id="dQw4w9WgXcQ", output_path=temp_download_dir)
-        task = await download_service._create_download_task(request)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            request = DownloadRequest(
+                video_id="dQw4w9WgXcQ", output_path=temp_download_dir
+            )
+            task = await download_service._create_download_task(request)
 
         # Test the download process (mocked)
         await download_service._download_video(task)
@@ -357,8 +390,14 @@ class TestDownloadService:
         """Test progress tracking functionality."""
         from services.download.main import DownloadRequest
 
-        request = DownloadRequest(video_id="dQw4w9WgXcQ", output_path=temp_download_dir)
-        task = await download_service._create_download_task(request)
+        # Mock _get_storage_path to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            request = DownloadRequest(
+                video_id="dQw4w9WgXcQ", output_path=temp_download_dir
+            )
+            task = await download_service._create_download_task(request)
 
         # Simulate progress update
         progress = download_service.task_progress[task.task_id]
@@ -389,9 +428,15 @@ class TestDownloadService:
 
             from services.download.main import DownloadRequest
 
-            request = DownloadRequest(video_id="dQw4w9WgXcQ", output_path=str(subdir))
+            # Mock _get_storage_path to avoid HTTP calls
+            with patch.object(
+                download_service, "_get_storage_path", return_value=str(subdir)
+            ):
+                request = DownloadRequest(
+                    video_id="dQw4w9WgXcQ", output_path=str(subdir)
+                )
 
-            task = await download_service._create_download_task(request)
+                task = await download_service._create_download_task(request)
             assert Path(task.output_path).exists()
             assert Path(task.output_path).is_dir()
 
