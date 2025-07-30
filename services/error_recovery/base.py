@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from .contracts import ErrorReporter, RetryStrategy, ServiceErrorHandler
-from .types import ErrorContext, ErrorReport, ErrorSeverity, RetryConfig
+from .types import ErrorContext, ErrorReport, ErrorSeverity, RetryConfig, RetryReason
 
 
 class ErrorRecoveryManager:
@@ -24,6 +24,29 @@ class ErrorRecoveryManager:
 
         # Track active recovery operations
         self.active_recoveries: Dict[str, dict] = {}
+
+    def _determine_retry_reason(
+        self, exception: Exception, context: ErrorContext
+    ) -> RetryReason:
+        """Determine retry reason from exception type and context."""
+        if isinstance(exception, (ConnectionError, TimeoutError)):
+            return RetryReason.NETWORK_ERROR
+        elif isinstance(exception, ValueError) and "quota" in str(exception).lower():
+            return RetryReason.API_QUOTA_EXCEEDED
+        elif isinstance(exception, ValueError) and "rate" in str(exception).lower():
+            return RetryReason.RATE_LIMITED
+        elif isinstance(exception, (IOError, OSError)):
+            return RetryReason.DOWNLOAD_FAILED
+        elif hasattr(exception, "response") and hasattr(
+            exception.response, "status_code"
+        ):
+            if exception.response.status_code == 503:
+                return RetryReason.SERVICE_UNAVAILABLE
+            elif exception.response.status_code == 429:
+                return RetryReason.RATE_LIMITED
+            elif exception.response.status_code >= 500:
+                return RetryReason.SERVER_ERROR
+        return RetryReason.UNKNOWN
 
     async def execute_with_retry(
         self,
@@ -44,6 +67,8 @@ class ErrorRecoveryManager:
             "attempts": 0,
         }
 
+        last_exception = None
+
         try:
             for attempt in range(retry_config.max_attempts):
                 try:
@@ -55,29 +80,48 @@ class ErrorRecoveryManager:
                     return result
 
                 except Exception as e:
+                    last_exception = e
+                    # Determine retry reason
+                    retry_reason = self._determine_retry_reason(e, context)
+
                     # Record failed attempt
-                    self.retry_strategy.record_attempt(False)
+                    self.retry_strategy.record_attempt(False, retry_reason)
 
                     # Check if we should retry
-                    if not await self.retry_strategy.should_retry(attempt, e, context):
+                    if not await self.retry_strategy.should_retry(
+                        attempt, e, retry_reason
+                    ):
                         break
 
                     # Try service-specific recovery first
                     if self.service_handler:
-                        handled = await self.service_handler.handle_error(e, context)
-                        if handled:
-                            continue
+                        try:
+                            handled = await self.service_handler.handle_error(
+                                e, context
+                            )
+                            if handled:
+                                continue
+                        except Exception:
+                            # If service handler fails, continue with normal retry logic
+                            pass
 
                     # If not the last attempt, wait and retry
                     if attempt < retry_config.max_attempts - 1:
-                        delay = await self.retry_strategy.get_delay(attempt, context)
-                        await asyncio.sleep(delay)
-                    else:
-                        # Last attempt failed - report error
-                        await self.error_reporter.report_error(
-                            e, ErrorSeverity.HIGH, context
+                        delay = await self.retry_strategy.get_delay(
+                            attempt, retry_reason
                         )
-                        raise
+                        await asyncio.sleep(delay)
+
+            # If we get here, all attempts failed
+            if last_exception:
+                try:
+                    await self.error_reporter.report_error(
+                        last_exception, ErrorSeverity.HIGH, context
+                    )
+                except Exception:
+                    # If error reporting fails, still propagate the original exception
+                    pass
+                raise last_exception
 
         finally:
             # Clean up tracking

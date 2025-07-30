@@ -4,7 +4,7 @@ import asyncio
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -133,7 +133,11 @@ class TestServiceCoordination:
             video_id="test_video_123", output_path=temp_storage_dir, quality="720p"
         )
 
-        task = await download_service._create_download_task(download_request)
+        # Mock storage service to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_storage_dir
+        ):
+            task = await download_service._create_download_task(download_request)
 
         # Verify task was created
         assert task.video_id == "test_video_123"

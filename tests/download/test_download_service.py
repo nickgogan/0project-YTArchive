@@ -570,7 +570,8 @@ class TestDownloadErrorRecovery:
         assert handler.get_error_severity(low_error, context) == ErrorSeverity.LOW
 
     @pytest.mark.unit
-    def test_download_error_handler_error_handling(self):
+    @pytest.mark.asyncio
+    async def test_download_error_handler_error_handling(self):
         """Test DownloadErrorHandler service-specific error handling."""
         from services.download.error_handler import DownloadErrorHandler
         from services.error_recovery.types import ErrorContext
@@ -582,22 +583,24 @@ class TestDownloadErrorRecovery:
 
         # Test disk space error handling
         disk_error = Exception("No space left on device")
-        result = handler.handle_error(disk_error, context)
-        assert result["handled"] is True
-        assert result["action_taken"] == "disk_space_warning"
-        assert len(result["suggestions"]) > 0
+        handled = await handler.handle_error(disk_error, context)
+        suggestions = handler.get_recovery_suggestions(disk_error)
+        assert handled is True
+        assert len(suggestions) > 0
 
         # Test network error handling
         network_error = Exception("Connection timeout occurred")
-        result = handler.handle_error(network_error, context)
-        assert result["handled"] is True
-        assert result["action_taken"] == "network_diagnostics"
+        handled = await handler.handle_error(network_error, context)
+        suggestions = handler.get_recovery_suggestions(network_error)
+        assert handled is True
+        assert len(suggestions) > 0
 
-        # Test YouTube error handling
+        # Test YouTube error handling (should not retry)
         youtube_error = Exception("Video unavailable: Private video")
-        result = handler.handle_error(youtube_error, context)
-        assert result["handled"] is True
-        assert result["action_taken"] == "youtube_error_classification"
+        handled = await handler.handle_error(youtube_error, context)
+        suggestions = handler.get_recovery_suggestions(youtube_error)
+        assert handled is False  # YouTube errors should not be retried
+        assert len(suggestions) > 0
 
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -614,7 +617,11 @@ class TestDownloadErrorRecovery:
             video_id="test123", quality="720p", output_path=temp_download_dir
         )
 
-        task = await download_service._create_download_task(request)
+        # Mock storage service to avoid HTTP calls
+        with patch.object(
+            download_service, "_get_storage_path", return_value=temp_download_dir
+        ):
+            task = await download_service._create_download_task(request)
 
         # Verify task creation
         assert task.task_id is not None

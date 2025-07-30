@@ -2,11 +2,11 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import List, Optional
 
 import yt_dlp
-from services.error_recovery.contracts import ServiceErrorHandler
 from services.error_recovery.types import ErrorContext, ErrorSeverity, RetryReason
+from services.error_recovery.contracts import ServiceErrorHandler
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,8 @@ class DownloadErrorHandler(ServiceErrorHandler):
             "refused",
             "reset",
             "broken pipe",
+            "http error",
+            "server error",
         ]
         self.youtube_error_keywords = [
             "video unavailable",
@@ -153,78 +155,86 @@ class DownloadErrorHandler(ServiceErrorHandler):
         return RetryReason.UNKNOWN
 
     async def handle_error(self, error: Exception, context: ErrorContext) -> bool:
-        """Perform service-specific error handling."""
+        """Perform service-specific error handling.
+
+        Returns:
+            bool: True if error was handled/recovered, False otherwise
+        """
         error_str = str(error).lower()
-        result: Dict[str, Any] = {
-            "handled": False,
-            "action_taken": None,
-            "suggestions": [],
-            "cleanup_performed": False,
-        }
+        handled = False
 
-        # Handle disk space issues
+        # Handle disk space issues (retryable)
         if "disk full" in error_str or "no space" in error_str:
-            result.update(
-                {
-                    "handled": True,
-                    "action_taken": "disk_space_warning",
-                    "suggestions": [
-                        "Check available disk space in output directory",
-                        "Consider cleaning up old downloads",
-                        "Move downloads to a different location with more space",
-                    ],
-                }
-            )
+            logger.info("Handled download error: disk_space_warning")
+            handled = True
 
-        # Handle network connectivity issues
+        # Handle network connectivity issues (retryable)
         elif any(keyword in error_str for keyword in self.network_error_keywords):
-            result.update(
-                {
-                    "handled": True,
-                    "action_taken": "network_diagnostics",
-                    "suggestions": [
-                        "Check internet connectivity",
-                        "Try a different network connection",
-                        "Verify YouTube is accessible from your location",
-                    ],
-                }
+            logger.info("Handled download error: network_diagnostics")
+            handled = True
+
+        # Handle filesystem errors
+        elif any(keyword in error_str for keyword in self.filesystem_error_keywords):
+            logger.info("Handled download error: filesystem_issue")
+            handled = (
+                True  # Filesystem errors are handled (but some may not be retryable)
             )
 
-        # Handle YouTube-specific errors
+        # Handle YouTube-specific errors (should not retry)
         elif any(keyword in error_str for keyword in self.youtube_error_keywords):
-            result.update(
-                {
-                    "handled": True,
-                    "action_taken": "youtube_error_classification",
-                    "suggestions": [
-                        "Verify the video URL is correct and accessible",
-                        "Check if the video is available in your region",
-                        "Try accessing the video in a web browser",
-                    ],
-                }
+            logger.info(
+                "Handled download error: youtube_error_classification (no retry)"
             )
+            handled = False  # Don't retry YouTube-specific errors
 
         # Handle yt-dlp specific errors
         elif isinstance(error, yt_dlp.DownloadError):
-            result.update(
-                {
-                    "handled": True,
-                    "action_taken": "ytdlp_error_analysis",
-                    "suggestions": [
-                        "Update yt-dlp to the latest version",
-                        "Try a different video quality/format",
-                        "Check yt-dlp documentation for this error",
-                    ],
-                }
-            )
+            logger.info("Handled download error: ytdlp_error_analysis")
+            handled = True
 
-        # Log the error handling result
-        if result["handled"]:
-            logger.info(f"Handled download error: {result['action_taken']}")
-        else:
+        # Log unhandled errors
+        if not handled:
             logger.warning(f"Unhandled download error: {error}")
 
-        return result["handled"]
+        return handled
+
+    def get_recovery_suggestions(self, exception: Exception) -> List[str]:
+        """Get service-specific recovery suggestions."""
+        error_str = str(exception).lower()
+
+        # Handle disk space issues
+        if "disk full" in error_str or "no space" in error_str:
+            return [
+                "Check available disk space in output directory",
+                "Consider cleaning up old downloads",
+                "Move downloads to a different location with more space",
+            ]
+
+        # Handle network connectivity issues
+        elif any(keyword in error_str for keyword in self.network_error_keywords):
+            return [
+                "Check internet connectivity",
+                "Try a different network connection",
+                "Verify YouTube is accessible from your location",
+            ]
+
+        # Handle YouTube-specific errors
+        elif any(keyword in error_str for keyword in self.youtube_error_keywords):
+            return [
+                "Verify the video URL is correct and accessible",
+                "Check if the video is available in your region",
+                "Try accessing the video in a web browser",
+            ]
+
+        # Handle yt-dlp specific errors
+        elif isinstance(exception, yt_dlp.DownloadError):
+            return [
+                "Update yt-dlp to the latest version",
+                "Try a different video quality/format",
+                "Check yt-dlp documentation for this error",
+            ]
+
+        return ["Check logs for more details", "Retry the operation"]
 
     def cleanup_after_failure(self, context: ErrorContext) -> bool:
         """Perform cleanup after download failure."""
@@ -262,40 +272,3 @@ class DownloadErrorHandler(ServiceErrorHandler):
         except Exception as e:
             logger.error(f"Error during download cleanup: {e}")
             return False
-
-    def get_recovery_suggestions(self, exception: Exception) -> list[str]:
-        """Get service-specific recovery suggestions."""
-        error_str = str(exception).lower()
-        suggestions = []
-
-        if any(keyword in error_str for keyword in self.network_error_keywords):
-            suggestions.extend(
-                [
-                    "Check internet connectivity.",
-                    "Verify firewall settings are not blocking the connection.",
-                    "Try again after a few minutes.",
-                ]
-            )
-
-        if any(keyword in error_str for keyword in self.youtube_error_keywords):
-            suggestions.extend(
-                [
-                    "Verify the video URL is correct and the video is public.",
-                    "Check for regional restrictions on the video.",
-                ]
-            )
-
-        if any(keyword in error_str for keyword in self.filesystem_error_keywords):
-            suggestions.extend(
-                [
-                    "Check file and directory permissions for the output path.",
-                    "Ensure there is enough disk space.",
-                ]
-            )
-
-        if not suggestions:
-            suggestions.append(
-                "Check yt-dlp documentation for this error or update yt-dlp."
-            )
-
-        return suggestions

@@ -24,6 +24,7 @@ from services.error_recovery.retry import (
 from services.error_recovery.reporting import BasicErrorReporter
 from services.error_recovery.types import (
     RetryConfig,
+    ErrorContext,
 )
 
 # Import download-specific error handler and resume components
@@ -303,8 +304,15 @@ class DownloadService(BaseService):
                 detail=f"Invalid quality: {request.quality}. Available: {list(self.quality_map.keys())}",
             )
 
-        # Get storage path from Storage service
-        storage_path = await self._get_storage_path(request.video_id, request.quality)
+        # Get storage path from Storage service with retry
+        context = ErrorContext(
+            operation_name="get_storage_path",
+            video_id=request.video_id,
+            operation_context={"quality": request.quality},
+        )
+        storage_path = await self.error_recovery.execute_with_retry(
+            self._get_storage_path, context, None, request.video_id, request.quality
+        )
         output_path = Path(storage_path).expanduser()
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -341,11 +349,28 @@ class DownloadService(BaseService):
                 task.started_at = datetime.now(timezone.utc)
                 self.task_progress[task.task_id].status = DownloadStatus.DOWNLOADING
 
-                # Report status to Jobs service
-                await self._report_job_status(task.job_id, "downloading")
+                # Report status to Jobs service with retry
+                context = ErrorContext(
+                    operation_name="report_job_status",
+                    video_id=task.video_id,
+                    operation_context={"job_id": task.job_id, "status": "downloading"},
+                )
+                await self.error_recovery.execute_with_retry(
+                    self._report_job_status, context, None, task.job_id, "downloading"
+                )
 
-                # Perform the download
-                await self._download_video(task)
+                # Perform the download with error recovery
+                context = ErrorContext(
+                    operation_name="download_video",
+                    video_id=task.video_id,
+                    operation_context={
+                        "task_id": task.task_id,
+                        "quality": task.quality,
+                    },
+                )
+                await self.error_recovery.execute_with_retry(
+                    self._download_video, context, None, task
+                )
 
                 # Mark as completed
                 task.status = DownloadStatus.COMPLETED
@@ -364,8 +389,15 @@ class DownloadService(BaseService):
                         task.video_id, task.file_path, file_size, task.quality
                     )
 
-                # Report successful completion to Jobs service
-                await self._report_job_status(task.job_id, "completed")
+                # Report successful completion to Jobs service with retry
+                context = ErrorContext(
+                    operation_name="report_job_status",
+                    video_id=task.video_id,
+                    operation_context={"job_id": task.job_id, "status": "completed"},
+                )
+                await self.error_recovery.execute_with_retry(
+                    self._report_job_status, context, None, task.job_id, "completed"
+                )
 
             except Exception as e:
                 # Mark as failed
@@ -374,8 +406,24 @@ class DownloadService(BaseService):
                 self.task_progress[task.task_id].status = DownloadStatus.FAILED
                 self.task_progress[task.task_id].error = str(e)
 
-                # Report failure to Jobs service
-                await self._report_job_status(task.job_id, "failed", str(e))
+                # Report failure to Jobs service with retry
+                context = ErrorContext(
+                    operation_name="report_job_status",
+                    video_id=task.video_id,
+                    operation_context={
+                        "job_id": task.job_id,
+                        "status": "failed",
+                        "error": str(e),
+                    },
+                )
+                await self.error_recovery.execute_with_retry(
+                    self._report_job_status,
+                    context,
+                    None,
+                    task.job_id,
+                    "failed",
+                    str(e),
+                )
             finally:
                 # Clean up background task reference
                 self.background_tasks.pop(task.task_id, None)
@@ -538,19 +586,15 @@ class DownloadService(BaseService):
 
     async def _get_storage_path(self, video_id: str, quality: str = "1080p") -> str:
         """Get appropriate storage path from Storage service."""
-        try:
-            storage_url = f"http://localhost:8003/api/v1/storage/exists/{video_id}"
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(storage_url)
-                if response.status_code == 200:
-                    # Use the storage service's recommended path structure
-                    return str(Path.home() / "YTArchive" / "videos")
-                else:
-                    # Default path if storage service unavailable
-                    return str(Path.home() / "YTArchive" / "videos")
-        except Exception:
-            # Fallback to default path
-            return str(Path.home() / "YTArchive" / "videos")
+        storage_url = f"http://localhost:8003/api/v1/storage/exists/{video_id}"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(storage_url)
+            if response.status_code == 200:
+                # Use the storage service's recommended path structure
+                return str(Path.home() / "YTArchive" / "videos")
+            else:
+                # Default path if storage service unavailable
+                return str(Path.home() / "YTArchive" / "videos")
 
     async def _notify_storage_video_saved(
         self, video_id: str, file_path: str, file_size: int, quality: str

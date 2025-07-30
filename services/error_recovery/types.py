@@ -3,7 +3,8 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class ErrorSeverity(str, Enum):
@@ -35,15 +36,32 @@ class RetryReason(str, Enum):
 class RetryConfig(BaseModel):
     """Configuration for retry strategies."""
 
-    max_attempts: int = 3
-    base_delay: float = 1.0
-    max_delay: float = 300.0  # 5 minutes
+    max_attempts: int = Field(
+        default=3, gt=0, description="Maximum number of retry attempts"
+    )
+    base_delay: float = Field(default=1.0, ge=0.0, description="Base delay in seconds")
+    max_delay: float = Field(
+        default=300.0, gt=0.0, description="Maximum delay in seconds"
+    )
     jitter: bool = True
-    exponential_base: float = 2.0
+    exponential_base: float = Field(
+        default=2.0, gt=1.0, description="Exponential backoff base"
+    )
 
     # Circuit breaker specific
-    failure_threshold: int = 5
-    recovery_timeout: float = 60.0  # 1 minute
+    failure_threshold: int = Field(
+        default=5, gt=0, description="Failure threshold for circuit breaker"
+    )
+    recovery_timeout: float = Field(
+        default=60.0, gt=0.0, description="Recovery timeout in seconds"
+    )
+
+    @model_validator(mode="after")
+    def validate_delay_relationship(self):
+        """Validate that max_delay is greater than or equal to base_delay."""
+        if self.max_delay < self.base_delay:
+            raise ValueError("max_delay must be greater than or equal to base_delay")
+        return self
 
 
 class ErrorContext(BaseModel):

@@ -53,7 +53,14 @@ filterwarnings = [
     "ignore::PendingDeprecationWarning:starlette.formparsers",
 ]
 markers = [
-    "performance: marks tests as performance benchmarks",
+    "unit: Unit tests for individual components",
+    "service: Service-level tests (single service, mocked dependencies)",
+    "integration: Integration tests (multiple services, real coordination)",
+    "e2e: End-to-end workflow tests",
+    "memory: Memory leak detection tests",
+    "slow: Tests that take longer to run",
+    "external: Tests that require external services (YouTube API, etc.)",
+    "performance: Performance benchmark tests measuring response times and throughput",
 ]
 
 [dependency-groups]

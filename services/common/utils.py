@@ -34,13 +34,14 @@ def retry_with_backoff(
                         raise
 
                     delay = min(delay * 2, max_delay)
+                    actual_delay = delay
                     if jitter:
-                        delay += random.uniform(0, delay / 4)
+                        actual_delay += random.uniform(0, delay / 4)
 
                     print(
-                        f"Retry {i+1}/{retries} for {func.__name__} after delay of {delay:.2f}s. Error: {e}"
+                        f"Retry {i+1}/{retries} for {func.__name__} after delay of {actual_delay:.2f}s. Error: {e}"
                     )
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(actual_delay)
 
         # We cast the wrapper to type F to give mypy a hint that the decorated
         # function retains its original signature.

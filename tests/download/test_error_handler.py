@@ -199,57 +199,63 @@ class TestDownloadErrorHandler:
         )
 
     @pytest.mark.unit
-    def test_handle_disk_space_error(self, error_handler, error_context):
+    @pytest.mark.asyncio
+    async def test_handle_disk_space_error(self, error_handler, error_context):
         """Test handling of disk space errors."""
         error = Exception("No space left on device")
-        result = error_handler.handle_error(error, error_context)
+        handled = await error_handler.handle_error(error, error_context)
+        suggestions = error_handler.get_recovery_suggestions(error)
 
-        assert result["handled"] is True
-        assert result["action_taken"] == "disk_space_warning"
-        assert len(result["suggestions"]) > 0
-        assert "disk space" in result["suggestions"][0].lower()
+        assert handled is True
+        assert len(suggestions) > 0
+        assert "disk space" in suggestions[0].lower()
 
     @pytest.mark.unit
-    def test_handle_network_error(self, error_handler, error_context):
+    @pytest.mark.asyncio
+    async def test_handle_network_error(self, error_handler, error_context):
         """Test handling of network errors."""
         error = Exception("Connection timeout occurred")
-        result = error_handler.handle_error(error, error_context)
+        handled = await error_handler.handle_error(error, error_context)
+        suggestions = error_handler.get_recovery_suggestions(error)
 
-        assert result["handled"] is True
-        assert result["action_taken"] == "network_diagnostics"
-        assert len(result["suggestions"]) > 0
-        assert "connectivity" in result["suggestions"][0].lower()
+        assert handled is True
+        assert len(suggestions) > 0
+        assert "connectivity" in suggestions[0].lower()
 
     @pytest.mark.unit
-    def test_handle_youtube_error(self, error_handler, error_context):
+    @pytest.mark.asyncio
+    async def test_handle_youtube_error(self, error_handler, error_context):
         """Test handling of YouTube-specific errors."""
         error = Exception("Video unavailable: Private video")
-        result = error_handler.handle_error(error, error_context)
+        handled = await error_handler.handle_error(error, error_context)
+        suggestions = error_handler.get_recovery_suggestions(error)
 
-        assert result["handled"] is True
-        assert result["action_taken"] == "youtube_error_classification"
-        assert len(result["suggestions"]) > 0
-        assert "video" in result["suggestions"][0].lower()
+        assert handled is False  # YouTube errors should not be retried
+        assert len(suggestions) > 0
+        assert "video" in suggestions[0].lower()
 
     @pytest.mark.unit
-    def test_handle_ytdlp_error(self, error_handler, error_context):
+    @pytest.mark.asyncio
+    async def test_handle_ytdlp_error(self, error_handler, error_context):
         """Test handling of yt-dlp specific errors."""
         error = yt_dlp.DownloadError("Extraction failed")
-        result = error_handler.handle_error(error, error_context)
+        handled = await error_handler.handle_error(error, error_context)
+        suggestions = error_handler.get_recovery_suggestions(error)
 
-        assert result["handled"] is True
-        assert result["action_taken"] == "ytdlp_error_analysis"
-        assert len(result["suggestions"]) > 0
-        assert "yt-dlp" in result["suggestions"][0].lower()
+        assert handled is True
+        assert len(suggestions) > 0
+        assert "yt-dlp" in suggestions[0].lower()
 
     @pytest.mark.unit
-    def test_handle_unhandled_error(self, error_handler, error_context):
+    @pytest.mark.asyncio
+    async def test_handle_unhandled_error(self, error_handler, error_context):
         """Test handling of unrecognized errors."""
         error = Exception("Some completely unknown error type")
-        result = error_handler.handle_error(error, error_context)
+        handled = await error_handler.handle_error(error, error_context)
+        suggestions = error_handler.get_recovery_suggestions(error)
 
-        assert result["handled"] is False
-        assert result["action_taken"] is None
+        assert handled is False
+        assert len(suggestions) > 0  # Should return default suggestions
 
     @pytest.mark.unit
     @patch("pathlib.Path.glob")

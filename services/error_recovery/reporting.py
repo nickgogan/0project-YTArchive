@@ -115,6 +115,33 @@ class BasicErrorReporter(ErrorReporter):
                 ]
             )
 
+        # Add general suggestions if no specific ones were found
+        if not suggestions:
+            exception_type = type(exception).__name__
+            if exception_type == "ValueError":
+                suggestions.extend(
+                    [
+                        "Check input parameters and data format",
+                        "Verify configuration settings",
+                        "Review error message for specific details",
+                    ]
+                )
+            elif exception_type == "ConnectionError":
+                suggestions.extend(
+                    [
+                        "Check network connectivity",
+                        "Verify service endpoints are accessible",
+                    ]
+                )
+            else:
+                suggestions.extend(
+                    [
+                        "Review error details and logs",
+                        "Try the operation again",
+                        "Check system resources and configuration",
+                    ]
+                )
+
         return suggestions[:5]  # Limit to top 5 suggestions
 
     def _is_recovery_possible(self, exception: Exception) -> bool:
