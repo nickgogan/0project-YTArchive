@@ -29,8 +29,31 @@ tests/
 ├── error_recovery/            # Error recovery and retry tests
 │   └── test_error_recovery.py
 ├── performance/               # Performance and optimization tests
+├── debug/                     # Specialized debugging tools
+│   ├── debug_exception.py             # Exception handling diagnostics
+│   ├── debug_exception_final.py       # Enhanced exception analysis
+│   ├── debug_exception_trace.py       # Exception flow tracing
+│   ├── debug_invalid_pyproject.py     # Invalid configuration testing
+│   ├── debug_line_by_line.py          # Line-by-line execution analysis
+│   ├── debug_mocks.py                 # Mock usage demonstrations
+│   ├── debug_status_logic.py          # Status logic investigation
+│   └── README.md                      # Documentation for debug scripts
 └── audit/                     # Test audit and validation
 ```
+
+### Specialized Debug Tools
+
+The `tests/debug/` directory contains specialized debugging scripts for investigating complex issues:
+
+```bash
+# Run a debug script directly
+python -m tests.debug.debug_exception_trace
+
+# Use with specific arguments
+python -m tests.debug.debug_status_logic --verbose
+```
+
+These tools are valuable when standard unit tests aren't sufficient to diagnose an issue. See the `README.md` in the debug directory for details on each script's purpose and usage.
 
 ### Centralized Infrastructure
 
@@ -202,8 +225,58 @@ cat tests/memory/reports/memory_leak_report_*.txt
 # Fast failure detection
 uv run pytest --tb=short --maxfail=1
 
-# Code quality validation
-uv run ruff check && uv run mypy .
+## Code Quality Validation
+
+YTArchive maintains enterprise-grade code quality through comprehensive linting, formatting, and type checking.
+
+### Running Code Quality Checks
+
+```bash
+# Run all code quality checks through UV environment
+uv run ruff check  # Linting
+uv run black --check .  # Formatting
+uv run mypy .  # Type checking
+
+# Or run all checks through pre-commit
+uv run pre-commit run --all-files
+```
+
+> **⚠️ Important**: Always use `uv run` prefix when running tools to ensure proper environment integration.
+
+### Pre-commit Configuration
+
+We use pre-commit hooks to ensure code quality standards are maintained on every commit. The configuration is in `.pre-commit-config.yaml` and includes:
+
+- trim trailing whitespace
+- fix end of files
+- check yaml
+- check for added large files
+- black (formatting)
+- ruff (linting)
+- mypy (type checking)
+
+### Type Safety Guidelines
+
+For comprehensive documentation on type safety in this project, refer to these WatchOut guides:
+
+- `Planning/WatchOut/type-safety-guide.md`: Best practices for ensuring type safety with MyPy
+- `Planning/WatchOut/mypy-uv-environment-mismatch.md`: Troubleshooting environment integration issues
+
+### Common Issues and Solutions
+
+1. **Import Order Issues**: Place `sys.path.insert` before other imports to avoid E402 errors.
+
+2. **Type Stub Recognition**: When installing type stubs with UV, ensure pre-commit hooks run mypy in the same environment:
+   ```bash
+   uv add --dev types-package-name
+   uv run mypy --install-types --non-interactive
+   ```
+
+3. **Function Name Shadowing**: Never name functions after built-in types like `list`, `dict`, etc.
+
+4. **UV Environment Integration**: Use the local hook pattern for pre-commit configuration with UV.
+
+# Memory Leak Detection
 
 # Use exit codes for automated decisions
 python tests/memory/run_memory_leak_tests.py
