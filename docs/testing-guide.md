@@ -66,12 +66,15 @@ All logging and temporary directories are centralized under the `logs/` folder:
 
 ```
 logs/
-├── download_service/     # Download service logs
-├── metadata_service/     # Metadata service logs
-├── storage_service/      # Storage service logs
-├── error_reports/        # Error and crash reports
+├── download_service/     # Download service error reports
+├── download_state/       # Download resume state management
+├── failed_downloads/     # Failed download tracking & recovery
+├── jobs/                 # Job processing records
+├── recovery_plans/       # Recovery plan generation
+├── error_reports/        # System-wide error logging
+├── playlist_results/     # Playlist processing results
 ├── runtime/             # Runtime performance logs
-└── temp/               # All test temporary files
+└── temp/               # Temporary files during operations
 ```
 
 **Benefits:**
@@ -79,6 +82,9 @@ logs/
 - Consistent temp directory patterns
 - Better debugging with organized structure
 - Production-ready logging organization
+- Complete test isolation with dedicated directories
+
+> **📚 For detailed logging architecture documentation**, see the comprehensive "Logging Architecture" section in `docs/user-guide.md` which explains the purpose, content types, and usage patterns for each directory.
 
 ## 🧠 Memory Leak Detection
 

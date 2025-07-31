@@ -223,14 +223,127 @@ YTArchive/
 │   ├── metadata/       # JSON metadata files
 │   └── thumbnails/     # Video thumbnails
 ├── storage/            # Internal storage database
-├── logs/              # Centralized operational logs
-│   ├── jobs/          # Job processing records
-│   ├── recovery_plans/    # Failed download recovery plans
-│   ├── error_reports/  # Error logging
-│   ├── failed_downloads/ # Failed download tracking
-│   ├── playlist_results/ # Playlist processing results
-│   └── runtime/       # Runtime logs
+├── logs/              # Centralized operational logs (see Logging Architecture below)
 ```
+
+## Logging Architecture
+
+YTArchive uses a comprehensive logging system with specialized directories for different types of operational data. Understanding this structure is essential for debugging, monitoring, and maintaining the system.
+
+### Complete Directory Structure
+
+```
+logs/
+├── download_service/     # Download service error reports
+├── download_state/       # Download resume state management
+├── failed_downloads/     # Failed download tracking & recovery
+├── jobs/                 # Job processing records
+├── recovery_plans/       # Recovery plan generation
+├── error_reports/        # System-wide error logging
+├── playlist_results/     # Playlist processing results
+├── runtime/             # Runtime performance logs
+└── temp/               # Temporary files during operations
+```
+
+### Directory Functions & Content
+
+#### 🔧 **Service-Specific Logging**
+
+**`logs/download_service/`**
+- **Purpose**: Error reporting and debugging for the download service
+- **Content**: Exception reports, crash dumps, diagnostic information
+- **When Used**: When download service encounters errors or exceptions
+- **File Format**: Error report files with timestamps and stack traces
+- **Example**: Service crashes, unexpected exceptions during video downloads
+
+**`logs/download_state/`**
+- **Purpose**: Download resume capability and progress tracking
+- **Content**: JSON state files for each active/resumable download
+- **When Used**: During downloads to enable resuming interrupted transfers
+- **File Format**: `{task_id}.json` files with download progress data
+- **Example**: Partial downloads that can be resumed after network interruption
+
+#### 📊 **Operational Tracking**
+
+**`logs/failed_downloads/`**
+- **Purpose**: Systematic tracking of downloads that failed after all retries
+- **Content**: Structured records for recovery planning and batch retries
+- **When Used**: When downloads exhaust all retry attempts and need manual attention
+- **File Format**: JSON records with error history and retry metadata
+- **Example**: Videos that consistently fail due to access restrictions or technical issues
+
+**`logs/jobs/`**
+- **Purpose**: Job processing records and coordination
+- **Content**: Job execution logs, status changes, inter-service communication
+- **When Used**: Throughout job lifecycle for coordination and debugging
+- **File Format**: Timestamped job execution logs
+- **Example**: Playlist processing coordination, job status transitions
+
+**`logs/recovery_plans/`**
+- **Purpose**: Recovery plan generation and failed download management
+- **Content**: Generated recovery strategies for failed operations
+- **When Used**: When creating recovery plans for failed downloads or operations
+- **File Format**: JSON recovery plan documents
+- **Example**: Batch retry strategies for temporarily unavailable videos
+
+#### 🛠️ **System Monitoring**
+
+**`logs/error_reports/`**
+- **Purpose**: System-wide error logging and crash reporting
+- **Content**: Application-level errors, unhandled exceptions, system failures
+- **When Used**: For critical system errors that need immediate attention
+- **File Format**: Structured error reports with context and severity levels
+- **Example**: Database connection failures, configuration errors, service startup issues
+
+**`logs/playlist_results/`**
+- **Purpose**: Playlist processing results and statistics
+- **Content**: Processing summaries, success/failure rates, metadata extraction results
+- **When Used**: After playlist processing completes
+- **File Format**: JSON result documents with processing statistics
+- **Example**: "Processed 50 videos: 45 successful, 3 failed, 2 unavailable"
+
+**`logs/runtime/`**
+- **Purpose**: Runtime performance monitoring and system metrics
+- **Content**: Performance data, resource usage, timing information
+- **When Used**: Continuously during system operation
+- **File Format**: Time-series performance logs
+- **Example**: Memory usage patterns, API response times, processing speeds
+
+**`logs/temp/`**
+- **Purpose**: Temporary files during operations
+- **Content**: Intermediate processing files, temporary downloads, cache files
+- **When Used**: During active operations that need temporary storage
+- **File Format**: Various temporary file formats
+- **Example**: Partial downloads, temporary metadata extraction
+
+### Download Workflow Integration
+
+The download-related directories work together in a coordinated workflow:
+
+1. **Download Starts** → Progress saved to `logs/download_state/`
+2. **Error Occurs** → Exception logged to `logs/download_service/`
+3. **Resume Attempted** → State updated in `logs/download_state/`
+4. **All Retries Fail** → Record created in `logs/failed_downloads/`
+5. **Recovery Planned** → Strategy generated in `logs/recovery_plans/`
+
+### Monitoring and Maintenance
+
+**Log File Sizes**: Monitor directory sizes regularly, especially:
+- `logs/download_state/` (active downloads)
+- `logs/failed_downloads/` (persistent failure records)
+- `logs/runtime/` (continuous logging)
+
+**Cleanup Patterns**:
+- **download_state/**: Clean up completed downloads
+- **failed_downloads/**: Archive old failures based on retry policies
+- **temp/**: Regular cleanup of temporary files
+- **runtime/**: Rotate logs based on size/age
+
+**Debugging Workflow**:
+1. Check `logs/error_reports/` for system-level issues
+2. Review `logs/download_service/` for download-specific problems
+3. Examine `logs/download_state/` for resume capability issues
+4. Analyze `logs/failed_downloads/` for persistent failure patterns
 
 ## Error Handling
 
