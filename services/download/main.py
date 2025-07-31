@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
-import yt_dlp
+import yt_dlp  # type: ignore[import-untyped]
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -116,7 +116,7 @@ class DownloadService(BaseService):
 
         # Initialize error recovery components
         self.download_error_handler = DownloadErrorHandler()
-        self.error_reporter = BasicErrorReporter("download_service")
+        self.error_reporter = BasicErrorReporter("logs/download_service")
 
         # Initialize resume components
         self.state_manager = DownloadStateManager()
@@ -711,10 +711,6 @@ class DownloadService(BaseService):
             output_path=task.output_path,
             job_id=task.job_id,
             quality=task.quality,
-            can_resume=True,
-            partial_file_path=download_state.partial_file_path,
-            resume_attempted=True,
-            original_task_id=task_id,
         )
 
         # Initialize progress tracking for resumed task
@@ -724,8 +720,6 @@ class DownloadService(BaseService):
             status=DownloadStatus.PENDING,
             progress_percent=0.0,
             downloaded_bytes=download_state.downloaded_bytes,
-            resumable=True,
-            partial_bytes=download_state.downloaded_bytes,
         )
 
         self.active_tasks[new_task_id] = resumed_task

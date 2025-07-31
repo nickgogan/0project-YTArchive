@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-import yt_dlp
+import yt_dlp  # type: ignore[import-untyped]
 from services.error_recovery.types import ErrorContext, ErrorSeverity, RetryReason
 from services.error_recovery.contracts import ServiceErrorHandler
 

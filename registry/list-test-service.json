@@ -5,7 +5,7 @@
   "health_endpoint": "/health",
   "description": "Service for list testing",
   "tags": [],
-  "registered_at": "2025-07-31T11:41:22.416634+00:00",
+  "registered_at": "2025-07-31T14:13:23.645922+00:00",
   "last_health_check": null,
   "is_healthy": true
 }
