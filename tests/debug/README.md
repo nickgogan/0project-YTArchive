@@ -50,3 +50,28 @@ Consider using these scripts when:
 - You're introducing changes to error handling or recovery logic
 
 These tools are particularly valuable for new developers trying to understand the system's behavior in exceptional circumstances.
+
+## For Developer Agents (AI Assistants)
+
+If you're an AI coding assistant working with this codebase, these debug scripts can significantly enhance your ability to diagnose complex issues:
+
+### Benefits for Developer Agents:
+
+1. **Isolated Problem Reproduction**: These scripts isolate specific components, making it easier to pinpoint the exact location of issues without needing to run the entire application.
+
+2. **State Inspection**: Debug scripts like `debug_line_by_line.py` provide visibility into state changes at each step, which helps identify exactly where behavior diverges from expectations.
+
+3. **Mock Demonstrations**: `debug_mocks.py` shows correct patterns for mocking complex components, which can be adapted for diagnosing integration issues.
+
+4. **Error Flow Tracing**: When encountering obscure errors, run scripts like `debug_exception_trace.py` to trace how exceptions propagate through the system.
+
+5. **Rapid Root Cause Analysis**: Rather than proposing general solutions based on symptoms, use these scripts to quickly identify the specific cause of complex issues.
+
+### Recommended Workflow for AI Assistants:
+
+1. When encountering a complex error or unexpected behavior, check if a relevant debug script exists
+2. Run the appropriate script with parameters that replicate the problematic scenario
+3. Analyze the detailed output to locate exactly where behavior diverges from expectations
+4. Use this precise diagnostic information to propose targeted solutions
+
+Leveraging these specialized tools will lead to faster, more accurate diagnoses than attempting to deduce issues solely from error messages or logs.

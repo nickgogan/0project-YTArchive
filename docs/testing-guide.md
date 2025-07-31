@@ -53,7 +53,12 @@ python -m tests.debug.debug_exception_trace
 python -m tests.debug.debug_status_logic --verbose
 ```
 
-These tools are valuable when standard unit tests aren't sufficient to diagnose an issue. See the `README.md` in the debug directory for details on each script's purpose and usage.
+These tools are valuable when standard unit tests aren't sufficient to diagnose an issue. They're especially useful for AI coding assistants to pinpoint root causes without having to run interactive debugging sessions.
+
+See the `README.md` in the debug directory for:
+- Details on each script's purpose and usage
+- Specific guidance for developer agents (AI assistants)
+- Recommended workflows for diagnosing complex issues
 
 ### Centralized Infrastructure
 
