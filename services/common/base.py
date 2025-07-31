@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Dict
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,15 +27,15 @@ class BaseService(ABC):
         )
         self._configure_routes()
 
-    def _configure_routes(self):
+    def _configure_routes(self) -> None:
         """Configure the API routes for the service."""
 
         @self.app.get("/health", tags=["Monitoring"])
-        async def health_check():
+        async def health_check() -> Dict[str, str]:
             """Health check endpoint to verify service is running."""
             return {"status": "ok", "service": self.service_name}
 
-    def run(self):
+    def run(self) -> None:
         """Run the service using uvicorn."""
         import uvicorn
 

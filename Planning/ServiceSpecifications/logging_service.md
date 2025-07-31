@@ -121,6 +121,86 @@ GET /api/v1/logs/services/{service_name}?hours=24
 }
 ```
 
+#### Clear Log Directories
+```
+POST /clear-logs?confirm=true&directories=jobs&directories=temp
+```
+
+**Query Parameters**:
+- `confirm`: **Required** - Must be `true` to confirm the clearing operation
+- `directories`: Optional - Specific directory names to clear (if not provided, clears all)
+
+**Valid Directory Names**:
+- `runtime` - Daily runtime logs
+- `failed_downloads` - Failed download logs
+- `error_reports` - Error report files
+- `download_service` - Download service logs
+- `download_state` - Download state tracking files
+- `jobs` - Job records (UUID-named files)
+- `playlist_results` - Playlist processing results
+- `recovery_plans` - Recovery plan files
+- `temp` - Temporary files
+
+**Response**:
+```json
+{
+  "status": "success",
+  "message": "Log directories cleared successfully",
+  "details": {
+    "directories_processed": [
+      {
+        "directory": "jobs",
+        "files_removed": 1247,
+        "path": "/path/to/logs/jobs"
+      },
+      {
+        "directory": "temp",
+        "files_removed": 5,
+        "path": "/path/to/logs/temp"
+      }
+    ],
+    "directories_skipped": [],
+    "total_files_removed": 1252,
+    "errors": []
+  }
+}
+```
+
+**Error Responses**:
+```json
+{
+  "detail": "Must set confirm=true to clear logs. This action cannot be undone."
+}
+```
+
+```json
+{
+  "detail": "Invalid directories specified: ['invalid_dir']. Valid options: ['runtime', 'failed_downloads', 'error_reports', 'download_service', 'download_state', 'jobs', 'playlist_results', 'recovery_plans', 'temp']"
+}
+```
+  "success": true,
+  "data": {
+    "service": "metadata",
+    "logs": [...],
+    "summary": {
+      "total_logs": 1500,
+      "by_level": {
+        "DEBUG": 100,
+        "INFO": 1200,
+        "WARNING": 150,
+        "ERROR": 45,
+        "CRITICAL": 5
+      },
+      "time_range": {
+        "from": "2024-01-01T00:00:00Z",
+        "to": "2024-01-02T00:00:00Z"
+      }
+    }
+  },
+  "trace_id": "uuid"
+}
+```
+
 ### Metrics
 
 #### Get Metrics

@@ -1,8 +1,9 @@
 """Logging Service for centralized log management."""
 
 import json
+import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from fastapi import HTTPException, Query
 from services.common.base import BaseService, ServiceSettings
@@ -18,7 +19,7 @@ class LoggingService(BaseService):
         self._ensure_log_directories()
         self._add_logging_routes()
 
-    def _ensure_log_directories(self):
+    def _ensure_log_directories(self) -> None:
         """Create the log directory structure if it doesn't exist."""
         directories = [
             self.logs_dir / "runtime",
@@ -29,11 +30,11 @@ class LoggingService(BaseService):
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
 
-    def _add_logging_routes(self):
+    def _add_logging_routes(self) -> None:
         """Add logging-specific routes."""
 
         @self.app.post("/log", tags=["Logging"])
-        async def receive_log(log_message: LogMessage):
+        async def receive_log(log_message: LogMessage) -> Dict[str, str]:
             """Receive a log message from another service and store it."""
             try:
                 await self._write_log_to_file(log_message)
@@ -55,7 +56,7 @@ class LoggingService(BaseService):
                 None, description="Filter by date (YYYY-MM-DD format)"
             ),
             limit: int = Query(100, description="Maximum number of logs to return"),
-        ):
+        ) -> Dict[str, Any]:
             """Retrieve logs with optional filtering."""
             try:
                 logs = await self._get_filtered_logs(
@@ -67,7 +68,36 @@ class LoggingService(BaseService):
                     status_code=500, detail=f"Failed to retrieve logs: {str(e)}"
                 )
 
-    async def _write_log_to_file(self, log_message: LogMessage):
+        @self.app.post("/clear-logs", tags=["Logging"])
+        async def clear_logs(
+            directories: Optional[List[str]] = Query(
+                None,
+                description="Specific directories to clear (if not provided, clears all)",
+            ),
+            confirm: bool = Query(
+                False, description="Confirmation flag to prevent accidental clearing"
+            ),
+        ) -> Dict[str, Any]:
+            """Clear log files from specified directories while preserving structure."""
+            if not confirm:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Must set confirm=true to clear logs. This action cannot be undone.",
+                )
+
+            try:
+                result = await self._clear_log_directories(directories)
+                return {
+                    "status": "success",
+                    "message": "Log directories cleared successfully",
+                    "details": result,
+                }
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to clear logs: {str(e)}"
+                )
+
+    async def _write_log_to_file(self, log_message: LogMessage) -> None:
         """Write a log message to the appropriate file based on its type."""
         # Determine the subdirectory based on log type
         subdir = log_message.log_type.value
@@ -97,7 +127,7 @@ class LoggingService(BaseService):
         log_type: Optional[LogType],
         date: Optional[str],
         limit: int,
-    ) -> List[dict]:
+    ) -> List[Dict[str, Any]]:
         """Get logs with filtering applied."""
         logs = []
 
@@ -162,6 +192,110 @@ class LoggingService(BaseService):
         # Sort by timestamp (newest first) and return
         logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         return logs[:limit]
+
+    async def _clear_log_directories(
+        self, target_directories: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Clear files from log directories while preserving directory structure.
+
+        Args:
+            target_directories: List of specific directory names to clear.
+                               If None, clears all known log directories.
+
+        Returns:
+            Dict containing results of the clearing operation.
+        """
+        # Define all known log directories
+        all_directories = [
+            "runtime",
+            "failed_downloads",
+            "error_reports",
+            "download_service",
+            "download_state",
+            "jobs",
+            "playlist_results",
+            "recovery_plans",
+            "temp",
+        ]
+
+        # Determine which directories to clear
+        if target_directories:
+            # Validate requested directories exist in our known list
+            invalid_dirs = [d for d in target_directories if d not in all_directories]
+            if invalid_dirs:
+                raise ValueError(
+                    f"Invalid directories specified: {invalid_dirs}. Valid options: {all_directories}"
+                )
+            directories_to_clear = target_directories
+        else:
+            directories_to_clear = all_directories
+
+        clearing_results: Dict[str, Any] = {
+            "directories_processed": [],
+            "directories_skipped": [],
+            "total_files_removed": 0,
+            "errors": [],
+        }
+
+        for dir_name in directories_to_clear:
+            dir_path = self.logs_dir / dir_name
+
+            try:
+                if not dir_path.exists():
+                    clearing_results["directories_skipped"].append(
+                        {"directory": dir_name, "reason": "Directory does not exist"}
+                    )
+                    continue
+
+                if not dir_path.is_dir():
+                    clearing_results["directories_skipped"].append(
+                        {"directory": dir_name, "reason": "Path is not a directory"}
+                    )
+                    continue
+
+                # Count files before clearing
+                files_before = list(dir_path.rglob("*"))
+                files_count = len([f for f in files_before if f.is_file()])
+
+                # Clear all files and subdirectories, but preserve the main directory
+                await self._safe_clear_directory_contents(dir_path)
+
+                clearing_results["directories_processed"].append(
+                    {
+                        "directory": dir_name,
+                        "files_removed": files_count,
+                        "path": str(dir_path),
+                    }
+                )
+                clearing_results["total_files_removed"] += files_count
+
+            except Exception as e:
+                clearing_results["errors"].append(
+                    {"directory": dir_name, "error": str(e)}
+                )
+
+        return clearing_results
+
+    async def _safe_clear_directory_contents(self, directory_path: Path) -> None:
+        """Safely clear all contents of a directory while preserving the directory itself.
+
+        Args:
+            directory_path: Path to the directory to clear.
+        """
+        if not directory_path.exists() or not directory_path.is_dir():
+            return
+
+        # Remove all contents of the directory
+        for item in directory_path.iterdir():
+            try:
+                if item.is_file():
+                    item.unlink()  # Remove file
+                elif item.is_dir():
+                    shutil.rmtree(item)  # Remove directory and all its contents
+            except Exception as e:
+                # Log the error but continue with other items
+                print(f"Warning: Could not remove {item}: {e}")
+                raise e
 
 
 if __name__ == "__main__":
