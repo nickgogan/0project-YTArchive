@@ -32,9 +32,17 @@ class CentralizedTempDir:
         return Path(path)
 
     def cleanup_all(self):
-        """Clean up all temporary directories and files."""
+        """Clean up all temporary directories and files while preserving the base directory."""
         if self.base_dir.exists():
-            shutil.rmtree(self.base_dir)
+            # Remove all contents but preserve the directory structure
+            for item in self.base_dir.iterdir():
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+        else:
+            # Ensure the directory exists for next test runs
+            self.base_dir.mkdir(parents=True, exist_ok=True)
 
 
 # Global instance for test usage
