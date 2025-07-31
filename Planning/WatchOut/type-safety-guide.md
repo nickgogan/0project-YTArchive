@@ -115,9 +115,56 @@ def get_error_report(error_types: Optional[List[Exception]] = None):
     VideoBatch = List[Tuple[str, YouTubeAPIResponse]]
 
     def process_batch(batch: VideoBatch) -> None:
-        # ...
+        # Implementation code here...
     ```
 
 5.  **Trust the Linter**: Our pre-commit hook runs MyPy. If it fails, do not ignore it. Address the type error before committing.
+
+## 4. UV Environment Management for MyPy
+
+When using the UV package manager (as we do in this project), special consideration is needed for MyPy and type stub management.
+
+### Pre-commit Hook Configuration
+
+Use the local hook pattern with `uv run mypy` rather than mirrors-mypy:
+
+```yaml
+# CORRECT CONFIGURATION for .pre-commit-config.yaml:
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        require_serial: true
+```
+
+### Type Stub Installation & Management
+
+To ensure MyPy can find your type stubs when using UV:
+
+1. Always install type stubs in the same environment as your dependencies:
+   ```bash
+   uv add --dev types-toml types-requests  # etc
+   ```
+
+2. When adding new imports, check if type stubs are needed:
+   ```bash
+   uv run mypy --install-types --non-interactive
+   ```
+
+3. Regularly sync your environment to ensure consistency:
+   ```bash
+   uv sync --dev
+   ```
+
+4. Run development tools through the UV environment:
+   ```bash
+   uv run mypy  # instead of just 'mypy'
+   uv run pytest  # instead of just 'pytest'
+   ```
+
+> **⚠️ WatchOut!** Even when type stubs are correctly installed, environment mismatches can cause MyPy to report "Library stubs not installed" errors. For detailed troubleshooting, see our [MyPy UV Environment Mismatch Guide](./mypy-uv-environment-mismatch.md).
 
 By following these guidelines, we can maintain a high level of code quality, reduce runtime errors, and create a more maintainable and self-documenting codebase.
