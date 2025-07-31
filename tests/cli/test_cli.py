@@ -13,8 +13,11 @@ def setup_async_api_mock(mock_api_class):
     """Helper function to properly setup async context manager mocks."""
     mock_api = AsyncMock()
     mock_api_class.return_value = mock_api
+
+    # ✅ CRITICAL: Set up async context manager methods (from WatchOut guide)
     mock_api.__aenter__.return_value = mock_api
-    mock_api.__aexit__.return_value = AsyncMock(return_value=None)
+    mock_api.__aexit__.return_value = None
+
     return mock_api
 
 
@@ -213,22 +216,36 @@ class TestDownloadCommand:
         # Setup mock
         mock_api = setup_async_api_mock(mock_api_class)
 
-        # Mock API responses
+        # Mock API responses for job-based workflow
         mock_api.check_video_exists.return_value = {
             "success": True,
             "data": {"exists": False},
         }
         mock_api.get_video_metadata.return_value = mock_api_response
-        mock_api.start_download.return_value = mock_download_response
-        mock_api.get_download_progress.return_value = mock_progress_response
+        mock_api.create_job.return_value = {
+            "success": True,
+            "job_id": "download-job-123",
+            "status": "pending",
+        }
+        mock_api.execute_job.return_value = {"success": True}
+        mock_api.get_job.return_value = {
+            "success": True,
+            "job_id": "download-job-123",
+            "status": "COMPLETED",  # ✅ CRITICAL: Must be uppercase to exit monitoring loop
+            "progress": {
+                "phase": "download_completed",
+                "progress_percentage": 100.0,
+            },
+        }
 
         result = runner.invoke(cli, ["download", "dQw4w9WgXcQ", "--quality", "720p"])
 
         assert result.exit_code == 0
-        assert mock_api.start_download.called
-        # Verify quality was passed correctly
-        call_args = mock_api.start_download.call_args
-        assert call_args[0][1] == "720p"  # quality parameter
+        assert mock_api.create_job.called
+        # Verify quality was passed correctly in job config
+        call_args = mock_api.create_job.call_args
+        job_config = call_args[1]["config"]  # keyword arguments
+        assert job_config["quality"] == "720p"
 
     @patch("cli.main.YTArchiveAPI")
     @pytest.mark.service
@@ -1077,16 +1094,17 @@ class TestPlaylistURLParsing:
         """Test parsing of invalid URLs."""
         from cli.main import _extract_playlist_id
 
-        # Regular video URL
+        # Regular video URL (should raise ValueError)
         url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        playlist_id = _extract_playlist_id(url)
-        assert playlist_id is None
+        with pytest.raises(ValueError, match="Invalid playlist URL"):
+            _extract_playlist_id(url)
 
-        # Completely invalid URL
+        # Completely invalid URL (should raise ValueError)
         url = "not-a-url"
-        playlist_id = _extract_playlist_id(url)
-        assert playlist_id is None
+        with pytest.raises(ValueError, match="Invalid playlist URL"):
+            _extract_playlist_id(url)
 
-        # Empty URL
-        playlist_id = _extract_playlist_id("")
-        assert playlist_id is None  # Should fail with invalid choice
+        # Empty URL (should raise ValueError)
+        url = ""
+        with pytest.raises(ValueError, match="Invalid playlist URL"):
+            _extract_playlist_id(url)  # Should fail with invalid choice

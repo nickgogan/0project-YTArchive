@@ -638,25 +638,25 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
   - [ ] Create resume endpoints and CLI commands
   - [ ] Test partial download scenarios and edge cases
 
-- [ ] **Quality Fallback System** 📋 **PLANNED (Day 29-30)**
+- [ ] **Quality Fallback System** 📋 **PLANNED (Day 29-30)** - NOT NEEDED
   - [ ] Implement automatic quality fallback during download failures
   - [ ] Add quality availability testing endpoints
   - [ ] Integrate with yt-dlp quality selection
   - [ ] Test quality fallback scenarios and user preferences
 
 - [ ] **Enhanced Error Reporting** 📋 **PLANNED (Day 30)**
-  - [ ] Expand error reporting with system diagnostics
-  - [ ] Add error dashboard and metrics endpoints
-  - [ ] Integrate with existing logging service
-  - [ ] Create error recovery CLI commands for monitoring
+  - [ ] Expand error reporting with system diagnostics - NOT NEEDED
+  - [ ] Add error dashboard and metrics endpoints - NOT NEEDED
+  - [ ] Integrate with existing logging service - NOT NEEDED
+  - [ ] Create error recovery CLI commands for monitoring - EXPLORE
 
-### 5.3 Performance Enhancements (Days 31-33)
+### 5.3 Performance Enhancements (Days 31-33) - NOT NEEDED
 - [ ] Implement connection pooling
 - [ ] Add caching layer for metadata
 - [ ] Optimize file I/O operations
 - [ ] Profile and optimize hot paths
 
-### 5.4 Monitoring and Observability (Days 34-36)
+### 5.4 Monitoring and Observability (Days 34-36) - NOT NEEDED
 - [ ] Add Prometheus metrics export
 - [ ] Create service dashboards
 - [ ] Implement distributed tracing
