@@ -393,73 +393,275 @@ class TestLogsCommand:
     """Test logs command functionality."""
 
     @patch("cli.main.YTArchiveAPI")
-    @pytest.mark.service
     def test_logs_success(self, mock_api_class, runner):
         """Test successful log retrieval."""
-        # Setup mock
         mock_api = setup_async_api_mock(mock_api_class)
-
-        logs_response = {
-            "success": True,
+        mock_api.get_logs.return_value = {
             "logs": [
                 {
-                    "timestamp": "2023-01-01T00:00:00Z",
-                    "level": "INFO",
+                    "timestamp": "2023-12-01 10:00:00",
                     "service": "download",
-                    "message": "Download started for video dQw4w9WgXcQ",
+                    "level": "INFO",
+                    "message": "Download started",
                 },
                 {
-                    "timestamp": "2023-01-01T00:01:00Z",
-                    "level": "INFO",
+                    "timestamp": "2023-12-01 10:01:00",
                     "service": "download",
-                    "message": "Download completed successfully",
+                    "level": "INFO",
+                    "message": "Download completed",
                 },
-            ],
+            ]
         }
-        mock_api.get_logs.return_value = logs_response
 
         result = runner.invoke(cli, ["logs"])
-
         assert result.exit_code == 0
         assert "Download started" in result.output
         assert "Download completed" in result.output
-        assert mock_api.get_logs.called
+        mock_api.get_logs.assert_called_once_with(service=None, level=None)
 
     @patch("cli.main.YTArchiveAPI")
-    @pytest.mark.service
     def test_logs_with_filters(self, mock_api_class, runner):
         """Test logs with service and level filters."""
-        # Setup mock
         mock_api = setup_async_api_mock(mock_api_class)
-
-        mock_api.get_logs.return_value = {"success": True, "logs": []}
-
-        result = runner.invoke(
-            cli, ["logs", "--service", "download", "--level", "ERROR"]
-        )
-
-        assert result.exit_code == 0
-        # Verify filters were passed to API
-        call_args = mock_api.get_logs.call_args
-        assert call_args[0][0] == "download"  # service
-        assert call_args[0][1] == "ERROR"  # level
-
-    @patch("cli.main.YTArchiveAPI")
-    @pytest.mark.service
-    def test_logs_api_error(self, mock_api_class, runner):
-        """Test logs with API error."""
-        # Setup mock
-        mock_api = setup_async_api_mock(mock_api_class)
-
         mock_api.get_logs.return_value = {
-            "success": False,
-            "error": "Logging service unavailable",
+            "logs": [
+                {
+                    "timestamp": "2023-12-01 10:00:00",
+                    "service": "download",
+                    "level": "ERROR",
+                    "message": "Download failed",
+                }
+            ]
         }
 
-        result = runner.invoke(cli, ["logs"])
-
+        result = runner.invoke(cli, ["logs", "-s", "download", "-l", "ERROR"])
         assert result.exit_code == 0
-        assert "Logging service unavailable" in result.output
+        assert "Download failed" in result.output
+        mock_api.get_logs.assert_called_once_with(service="download", level="ERROR")
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_logs_api_error(self, mock_api_class, runner):
+        """Test logs with API error."""
+        import httpx
+
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_response = AsyncMock()
+        mock_response.status_code = 500
+        mock_response.reason_phrase = "Internal Server Error"
+        mock_api.get_logs.side_effect = httpx.HTTPStatusError(
+            "HTTP Error", request=AsyncMock(), response=mock_response
+        )
+
+        result = runner.invoke(cli, ["logs"])
+        assert result.exit_code == 0
+        assert "HTTP Error" in result.output
+        mock_api.get_logs.assert_called_once_with(service=None, level=None)
+
+
+class TestClearLogsCommand:
+    """Test clear-logs command functionality."""
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_help(self, mock_api_class, runner):
+        """Test clear-logs command help display."""
+        result = runner.invoke(cli, ["clear-logs", "--help"])
+        assert result.exit_code == 0
+        assert (
+            "Clear log directories while preserving directory structure"
+            in result.output
+        )
+        assert "--directories" in result.output
+        assert "--all" in result.output
+        assert "--confirm" in result.output
+        assert "--json" in result.output
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_missing_parameters(self, mock_api_class, runner):
+        """Test clear-logs command requires either directories or --all flag."""
+        result = runner.invoke(cli, ["clear-logs", "-y"])
+        assert result.exit_code == 0
+        assert (
+            "You must specify directories to clear" in result.output
+            or "must specify directories" in result.output
+        )
+
+    @patch("cli.main.YTArchiveAPI")
+    @patch("cli.main.click.confirm")
+    def test_clear_logs_specific_directories_success(
+        self, mock_confirm, mock_api_class, runner
+    ):
+        """Test successful clearing of specific directories with confirmation."""
+        mock_confirm.return_value = True
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_api.clear_logs.return_value = {
+            "status": "success",
+            "details": {
+                "total_files_removed": 150,
+                "directories_processed": [
+                    {"directory": "runtime", "files_removed": 25},
+                    {"directory": "jobs", "files_removed": 125},
+                ],
+                "directories_skipped": [],
+                "errors": [],
+            },
+        }
+
+        result = runner.invoke(cli, ["clear-logs", "-d", "runtime", "-d", "jobs"])
+        assert result.exit_code == 0
+        assert "Success!" in result.output
+        assert "Total files removed: 150" in result.output
+        assert "Processed Directories" in result.output
+        mock_api.clear_logs.assert_called_once_with(
+            directories=["runtime", "jobs"], confirm=True
+        )
+        mock_confirm.assert_called_once()
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_all_directories_with_confirm(self, mock_api_class, runner):
+        """Test clearing all directories with --confirm flag (skip prompt)."""
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_api.clear_logs.return_value = {
+            "status": "success",
+            "details": {
+                "total_files_removed": 500,
+                "directories_processed": [
+                    {"directory": "runtime", "files_removed": 100},
+                    {"directory": "jobs", "files_removed": 250},
+                    {"directory": "temp", "files_removed": 150},
+                ],
+                "directories_skipped": [],
+                "errors": [],
+            },
+        }
+
+        result = runner.invoke(cli, ["clear-logs", "--all", "-y"])
+        assert result.exit_code == 0
+        assert "Success!" in result.output
+        assert "Total files removed: 500" in result.output
+        mock_api.clear_logs.assert_called_once_with(directories=None, confirm=True)
+
+    @patch("cli.main.YTArchiveAPI")
+    @patch("cli.main.click.confirm")
+    def test_clear_logs_user_cancellation(self, mock_confirm, mock_api_class, runner):
+        """Test user cancellation during confirmation prompt."""
+        mock_confirm.return_value = False
+        mock_api = setup_async_api_mock(mock_api_class)
+
+        result = runner.invoke(cli, ["clear-logs", "--all"])
+        assert result.exit_code == 0
+        assert "Operation cancelled" in result.output
+        mock_api.clear_logs.assert_not_called()
+        mock_confirm.assert_called_once()
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_json_output(self, mock_api_class, runner):
+        """Test clear-logs command with JSON output format."""
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_response = {
+            "status": "success",
+            "details": {
+                "total_files_removed": 75,
+                "directories_processed": [
+                    {"directory": "runtime", "files_removed": 75}
+                ],
+                "directories_skipped": [],
+                "errors": [],
+            },
+        }
+        mock_api.clear_logs.return_value = mock_response
+
+        result = runner.invoke(cli, ["clear-logs", "-d", "runtime", "-y", "--json"])
+        assert result.exit_code == 0
+        # Verify it's valid JSON output
+        try:
+            output_json = json.loads(result.output)
+            assert output_json == mock_response
+        except json.JSONDecodeError:
+            pytest.fail("Output is not valid JSON")
+        mock_api.clear_logs.assert_called_once_with(
+            directories=["runtime"], confirm=True
+        )
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_with_skipped_directories(self, mock_api_class, runner):
+        """Test clear-logs output when some directories are skipped."""
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_api.clear_logs.return_value = {
+            "status": "success",
+            "details": {
+                "total_files_removed": 50,
+                "directories_processed": [
+                    {"directory": "runtime", "files_removed": 50}
+                ],
+                "directories_skipped": [
+                    {"directory": "nonexistent", "reason": "Directory does not exist"}
+                ],
+                "errors": [],
+            },
+        }
+
+        result = runner.invoke(
+            cli, ["clear-logs", "-d", "runtime", "-d", "nonexistent", "-y"]
+        )
+        assert result.exit_code == 0
+        assert "Success!" in result.output
+        assert "Skipped Directories" in result.output
+        assert "nonexistent" in result.output
+        assert "Directory does not exist" in result.output
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_with_errors(self, mock_api_class, runner):
+        """Test clear-logs output when errors occur during clearing."""
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_api.clear_logs.return_value = {
+            "status": "success",
+            "details": {
+                "total_files_removed": 25,
+                "directories_processed": [
+                    {"directory": "runtime", "files_removed": 25}
+                ],
+                "directories_skipped": [],
+                "errors": [{"directory": "protected", "error": "Permission denied"}],
+            },
+        }
+
+        result = runner.invoke(
+            cli, ["clear-logs", "-d", "runtime", "-d", "protected", "-y"]
+        )
+        assert result.exit_code == 0
+        assert "Success!" in result.output
+        assert "Errors Encountered" in result.output
+        assert "protected" in result.output
+        assert "Permission denied" in result.output
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_api_error(self, mock_api_class, runner):
+        """Test clear-logs with API error handling."""
+        import httpx
+
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_response = AsyncMock()
+        mock_response.status_code = 500
+        mock_response.reason_phrase = "Internal Server Error"
+        mock_response.json.return_value = {"detail": "Log clearing service unavailable"}
+        mock_api.clear_logs.side_effect = httpx.HTTPStatusError(
+            "HTTP Error", request=AsyncMock(), response=mock_response
+        )
+
+        result = runner.invoke(cli, ["clear-logs", "-d", "runtime", "-y"])
+        assert result.exit_code == 0
+        assert "API Error" in result.output
+        assert "Log clearing service unavailable" in result.output
+
+    @patch("cli.main.YTArchiveAPI")
+    def test_clear_logs_unexpected_error(self, mock_api_class, runner):
+        """Test clear-logs with unexpected error handling."""
+        mock_api = setup_async_api_mock(mock_api_class)
+        mock_api.clear_logs.side_effect = Exception("Unexpected error occurred")
+
+        result = runner.invoke(cli, ["clear-logs", "-d", "runtime", "-y"])
+        assert result.exit_code == 0
+        assert "An unexpected error occurred" in result.output
 
 
 class TestUtilityFunctions:
