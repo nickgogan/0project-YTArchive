@@ -299,6 +299,6 @@ class LoggingService(BaseService):
 
 
 if __name__ == "__main__":
-    settings = ServiceSettings(port=8001)  # Port for logging service
+    settings = ServiceSettings(port=8004)  # Port for logging service
     service = LoggingService("LoggingService", settings)
     service.run()
