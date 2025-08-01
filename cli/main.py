@@ -4,7 +4,7 @@ import asyncio
 import json
 import os
 import toml
-import pathlib
+from pathlib import Path
 import psutil
 from typing import Dict, Any, Optional
 
@@ -179,7 +179,7 @@ class YTArchiveAPI:
         payload = {
             "video_id": video_id,
             "quality": quality,
-            "output_path": str(pathlib.Path(output_path).expanduser()),
+            "output_path": str(Path(output_path).expanduser()),
             "include_captions": True,
             "caption_languages": ["en"],
         }
@@ -551,7 +551,6 @@ async def _run_system_diagnostics(
     import psutil
     import sys
     import subprocess
-    import pathlib
     from typing import Dict, Any
 
     diagnostics_data: Dict[str, Any] = {
@@ -595,7 +594,7 @@ async def _run_system_diagnostics(
         # Check services
         services = ["jobs", "storage", "metadata", "download", "logging"]
         for service in services:
-            service_path = pathlib.Path(f"services/{service}/main.py")
+            service_path = Path(f"services/{service}/main.py")
             diagnostics_data["services"][service] = {
                 "exists": service_path.exists(),
                 "path": str(service_path),
@@ -781,7 +780,7 @@ async def _list_recovery_plans(json_output: bool = False) -> None:
     Following WatchOut pattern: async implementation with API integration.
     """
     try:
-        work_plans_dir = pathlib.Path("~/YTArchive/work_plans").expanduser()
+        work_plans_dir = Path("~/YTArchive/work_plans").expanduser()
 
         if not work_plans_dir.exists():
             if json_output:
@@ -853,7 +852,7 @@ async def _list_recovery_plans(json_output: bool = False) -> None:
 async def _show_recovery_plan(plan_id: str, json_output: bool = False) -> None:
     """Show details of a specific recovery plan."""
     try:
-        work_plans_dir = pathlib.Path("~/YTArchive/work_plans").expanduser()
+        work_plans_dir = Path("~/YTArchive/work_plans").expanduser()
         plan_file = work_plans_dir / f"{plan_id}.json"
 
         if not plan_file.exists():
@@ -930,6 +929,13 @@ async def _create_recovery_plan(
     from typing import Dict, Any
 
     try:
+        # Check if any input files were provided
+        if not unavailable_videos_file and not failed_downloads_file:
+            console.print(
+                "[yellow]No unavailable videos or failed downloads provided[/yellow]"
+            )
+            return
+
         # Generate plan data
         plan_id = str(uuid.uuid4())[:8]
         plan_data: Dict[str, Any] = {
@@ -943,7 +949,7 @@ async def _create_recovery_plan(
 
         # Process input files
         if unavailable_videos_file:
-            unavailable_file = pathlib.Path(unavailable_videos_file)
+            unavailable_file = Path(unavailable_videos_file)
             if unavailable_file.exists():
                 with open(unavailable_file, "r") as f:
                     for line in f:
@@ -959,7 +965,7 @@ async def _create_recovery_plan(
                 plan_data["sources"].append(str(unavailable_file))
 
         if failed_downloads_file:
-            failed_file = pathlib.Path(failed_downloads_file)
+            failed_file = Path(failed_downloads_file)
             if failed_file.exists():
                 with open(failed_file, "r") as f:
                     for line in f:
@@ -975,7 +981,7 @@ async def _create_recovery_plan(
                 plan_data["sources"].append(str(failed_file))
 
         # Save plan
-        work_plans_dir = pathlib.Path("~/YTArchive/work_plans").expanduser()
+        work_plans_dir = Path("~/YTArchive/work_plans").expanduser()
         work_plans_dir.mkdir(parents=True, exist_ok=True)
 
         plan_file = work_plans_dir / f"{plan_id}.json"
@@ -1552,7 +1558,7 @@ async def _download_playlist(
 
 @playlist.command()
 @click.argument("playlist_url")
-@click.option("--json", is_flag=True, help="Output in JSON format")
+@click.option("--json", "json_output", is_flag=True, help="Output in JSON format")
 def info(playlist_url: str, json_output: bool):
     """Get information about a YouTube playlist."""
     asyncio.run(_get_playlist_info(playlist_url, json_output))
@@ -1752,7 +1758,7 @@ async def _validate_configuration(json_output: bool, fix: bool = False) -> dict:
         }
 
         # Check pyproject.toml (this will raise exception if Path is patched)
-        pyproject_path = pathlib.Path("pyproject.toml")
+        pyproject_path = Path("pyproject.toml")
         validation_result["configuration_files"]["pyproject.toml"] = {
             "exists": pyproject_path.exists()
         }
@@ -1804,7 +1810,7 @@ async def _validate_configuration(json_output: bool, fix: bool = False) -> dict:
             validation_result["overall_status"] = "issues_found"
 
         # Check pytest.ini
-        pytest_ini_path = pathlib.Path("pytest.ini")
+        pytest_ini_path = Path("pytest.ini")
         validation_result["configuration_files"]["pytest.ini"] = {
             "exists": pytest_ini_path.exists()
         }
@@ -1865,7 +1871,7 @@ async def _validate_configuration(json_output: bool, fix: bool = False) -> dict:
         # Check critical directories
         critical_dirs = ["logs", "logs/temp"]
         for dir_path in critical_dirs:
-            dir_obj = pathlib.Path(dir_path)
+            dir_obj = Path(dir_path)
             validation_result["directory_structure"][dir_path] = {
                 "exists": dir_obj.exists()
             }
@@ -1894,7 +1900,7 @@ async def _validate_configuration(json_output: bool, fix: bool = False) -> dict:
         # Check service config files
         services = ["jobs", "metadata", "download", "storage", "logging"]
         for service in services:
-            config_path = pathlib.Path(f"services/{service}/config.py")
+            config_path = Path(f"services/{service}/config.py")
             exists = config_path.exists()
             validation_result["services_config"][service] = {"config_exists": exists}
 
@@ -2068,7 +2074,7 @@ async def _check_system_health(json_output: bool, detailed: bool = False):
     missing_dirs = []
 
     for dir_name in critical_dirs:
-        dir_path = pathlib.Path(dir_name)
+        dir_path = Path(dir_name)
         if not dir_path.exists():
             missing_dirs.append(dir_name)
             health_data["issues"].append(f"Critical directory missing: {dir_name}")
