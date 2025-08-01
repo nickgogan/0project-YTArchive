@@ -273,24 +273,109 @@ We use pre-commit hooks to ensure code quality standards are maintained on every
 For comprehensive documentation on type safety in this project, refer to these WatchOut guides:
 
 - `Planning/WatchOut/type-safety-guide.md`: Best practices for ensuring type safety with MyPy
+- `Planning/WatchOut/pre-commit-debugging-guide.md`: Systematic approach to resolving pre-commit hook failures
+- `Planning/WatchOut/refactoring-duplicate-methods-guide.md`: Handling duplicate function definitions during refactoring
 - `Planning/WatchOut/mypy-uv-environment-mismatch.md`: Troubleshooting environment integration issues
+
+**Essential Type Safety Imports for Tests**:
+```python
+from typing import Dict, List, Any, Optional, Union
+```
+
+**Key Principles**:
+- Always use explicit type annotations for mutable data structures
+- Pass Python objects (not strings) to Pydantic model constructors
+- Avoid parameter names that shadow built-in modules (`json`, `str`, `list`)
+- Use systematic debugging workflow when pre-commit hooks fail
 
 ### Common Issues and Solutions
 
-1. **Import Order Issues**: Place `sys.path.insert` before other imports to avoid E402 errors.
+#### Pre-commit Hook Failures
+When pre-commit hooks fail, use systematic debugging instead of trial-and-error:
 
-2. **Type Stub Recognition**: When installing type stubs with UV, ensure pre-commit hooks run mypy in the same environment:
+```bash
+# 1. Get full scope of all failing hooks
+uv run pre-commit run --all-files
+
+# 2. Focus on specific failing hooks
+uv run pre-commit run ruff --all-files
+uv run pre-commit run mypy --all-files
+```
+
+**Priority Resolution Order**:
+1. **Blocking errors** (Ruff F811, F821) - prevent commits
+2. **Type safety errors** (MyPy constructor, import issues)
+3. **Enhancement errors** (external library stubs)
+
+For comprehensive pre-commit debugging, see: `Planning/WatchOut/pre-commit-debugging-guide.md`
+
+#### Type Safety in Tests
+
+**1. Collection vs Mutable Type Issues**
+```python
+# ❌ WRONG: MyPy infers as Collection[str] - can't mutate
+test_data = {"items": [], "status": "ok"}
+test_data["items"].append("error")  # MyPy error!
+
+# ✅ CORRECT: Explicit mutable type annotation
+from typing import Dict, List, Any
+
+test_data: Dict[str, Any] = {"items": [], "status": "ok"}
+test_data["items"].append("error")  # Works!
+```
+
+**2. Pydantic Model Constructor Issues in Tests**
+```python
+# ❌ WRONG: Passing string representations
+job_data = {
+    "job_type": "VIDEO_DOWNLOAD",  # String, not enum!
+    "status": "PENDING",           # String, not enum!
+}
+test_job = JobResponse(**job_data)  # MyPy error!
+
+# ✅ CORRECT: Pass Python objects
+from services.common.models import JobType, JobStatus
+
+test_job = JobResponse(
+    job_id="test-123",
+    job_type=JobType.VIDEO_DOWNLOAD,  # Enum object
+    status=JobStatus.PENDING,         # Enum object
+    created_at=datetime.now(),
+    options={}
+)
+```
+
+**3. Parameter Name Shadowing in Test Functions**
+```python
+# ❌ WRONG: Parameter shadows json module
+def test_output_format(json: bool):  # Shadows json module!
+    if json:
+        result = json.dumps(data)  # Error: bool.dumps()!
+
+# ✅ CORRECT: Use descriptive parameter names
+def test_output_format(json_output: bool):
+    if json_output:
+        import json
+        result = json.dumps(data)  # Works!
+```
+
+#### Legacy Issues
+
+4. **Import Order Issues**: Place `sys.path.insert` before other imports to avoid E402 errors.
+
+5. **Type Stub Recognition**: When installing type stubs with UV, ensure pre-commit hooks run mypy in the same environment:
    ```bash
    uv add --dev types-package-name
    uv run mypy --install-types --non-interactive
    ```
 
-3. **Function Name Shadowing**: Never name functions after built-in types like `list`, `dict`, etc.
+6. **Function Name Shadowing**: Never name functions after built-in types like `list`, `dict`, etc.
 
-4. **UV Environment Integration**: Use the local hook pattern for pre-commit configuration with UV.
+7. **UV Environment Integration**: Use the local hook pattern for pre-commit configuration with UV.
 
-# Memory Leak Detection
+#### Testing Memory Leak Detection
 
+```bash
 # Use exit codes for automated decisions
 python tests/memory/run_memory_leak_tests.py
 echo "Exit code: $?"
