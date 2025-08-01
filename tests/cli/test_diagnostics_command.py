@@ -73,6 +73,7 @@ class TestDiagnosticsCommand:
             "overall_status": "healthy",
         }
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_basic(
         self, mock_run_diagnostics, runner, base_diagnostics_data, mock_system_info
@@ -86,6 +87,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_with_pip_packages(
         self, mock_run_diagnostics, runner, base_diagnostics_data, mock_pip_list_output
@@ -100,6 +102,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_with_config_check(
         self, mock_run_diagnostics, runner, base_diagnostics_data
@@ -115,6 +118,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_with_test_execution(
         self, mock_run_diagnostics, runner, base_diagnostics_data
@@ -131,6 +135,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_failed_tests(
         self, mock_run_diagnostics, runner, base_diagnostics_data
@@ -148,6 +153,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_performance_warnings(
         self, mock_run_diagnostics, runner, base_diagnostics_data
@@ -170,6 +176,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     @patch(
         "cli.main._run_system_diagnostics",
         new_callable=AsyncMock,
@@ -185,6 +192,7 @@ class TestDiagnosticsCommand:
         assert isinstance(result.exception, Exception)
         assert "Platform error" in str(result.exception)
 
+    @pytest.mark.service
     @patch("cli.main._run_system_diagnostics", new_callable=AsyncMock)
     def test_run_system_diagnostics_directory_analysis(
         self, mock_run_diagnostics, runner, base_diagnostics_data
@@ -204,6 +212,7 @@ class TestDiagnosticsCommand:
         assert result.exit_code == 0
         mock_run_diagnostics.assert_awaited_once()
 
+    @pytest.mark.service
     def test_display_diagnostics_results_healthy_status(self):
         """Test display of healthy diagnostics results."""
         diagnostics_data = {
@@ -229,6 +238,7 @@ class TestDiagnosticsCommand:
         output = test_console.export_text()
         assert "System Diagnostics: HEALTHY" in output
 
+    @pytest.mark.service
     def test_display_diagnostics_results_with_testing_infrastructure(self):
         """Test display of diagnostics with testing infrastructure info."""
         diagnostics_data = {
@@ -259,6 +269,7 @@ class TestDiagnosticsCommand:
         output = test_console.export_text()
         assert "Testing Infrastructure" in output
 
+    @pytest.mark.service
     def test_display_diagnostics_results_with_recommendations(self):
         """Test display of diagnostics with recommendations."""
         diagnostics_data = {

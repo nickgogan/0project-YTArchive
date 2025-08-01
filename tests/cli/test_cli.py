@@ -392,6 +392,7 @@ class TestStatusCommand:
 class TestLogsCommand:
     """Test logs command functionality."""
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_logs_success(self, mock_api_class, runner):
         """Test successful log retrieval."""
@@ -419,6 +420,7 @@ class TestLogsCommand:
         assert "Download completed" in result.output
         mock_api.get_logs.assert_called_once_with(service=None, level=None)
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_logs_with_filters(self, mock_api_class, runner):
         """Test logs with service and level filters."""
@@ -439,6 +441,7 @@ class TestLogsCommand:
         assert "Download failed" in result.output
         mock_api.get_logs.assert_called_once_with(service="download", level="ERROR")
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_logs_api_error(self, mock_api_class, runner):
         """Test logs with API error."""
@@ -461,6 +464,7 @@ class TestLogsCommand:
 class TestClearLogsCommand:
     """Test clear-logs command functionality."""
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_help(self, mock_api_class, runner):
         """Test clear-logs command help display."""
@@ -475,6 +479,7 @@ class TestClearLogsCommand:
         assert "--confirm" in result.output
         assert "--json" in result.output
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_missing_parameters(self, mock_api_class, runner):
         """Test clear-logs command requires either directories or --all flag."""
@@ -485,6 +490,7 @@ class TestClearLogsCommand:
             or "must specify directories" in result.output
         )
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     @patch("cli.main.click.confirm")
     def test_clear_logs_specific_directories_success(
@@ -516,6 +522,7 @@ class TestClearLogsCommand:
         )
         mock_confirm.assert_called_once()
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_all_directories_with_confirm(self, mock_api_class, runner):
         """Test clearing all directories with --confirm flag (skip prompt)."""
@@ -540,6 +547,7 @@ class TestClearLogsCommand:
         assert "Total files removed: 500" in result.output
         mock_api.clear_logs.assert_called_once_with(directories=None, confirm=True)
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     @patch("cli.main.click.confirm")
     def test_clear_logs_user_cancellation(self, mock_confirm, mock_api_class, runner):
@@ -553,6 +561,7 @@ class TestClearLogsCommand:
         mock_api.clear_logs.assert_not_called()
         mock_confirm.assert_called_once()
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_json_output(self, mock_api_class, runner):
         """Test clear-logs command with JSON output format."""
@@ -582,6 +591,7 @@ class TestClearLogsCommand:
             directories=["runtime"], confirm=True
         )
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_with_skipped_directories(self, mock_api_class, runner):
         """Test clear-logs output when some directories are skipped."""
@@ -609,6 +619,7 @@ class TestClearLogsCommand:
         assert "nonexistent" in result.output
         assert "Directory does not exist" in result.output
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_with_errors(self, mock_api_class, runner):
         """Test clear-logs output when errors occur during clearing."""
@@ -634,6 +645,7 @@ class TestClearLogsCommand:
         assert "protected" in result.output
         assert "Permission denied" in result.output
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_api_error(self, mock_api_class, runner):
         """Test clear-logs with API error handling."""
@@ -653,6 +665,7 @@ class TestClearLogsCommand:
         assert "API Error" in result.output
         assert "Log clearing service unavailable" in result.output
 
+    @pytest.mark.service
     @patch("cli.main.YTArchiveAPI")
     def test_clear_logs_unexpected_error(self, mock_api_class, runner):
         """Test clear-logs with unexpected error handling."""

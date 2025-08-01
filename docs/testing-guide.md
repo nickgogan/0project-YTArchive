@@ -29,6 +29,7 @@ tests/
 ├── error_recovery/            # Error recovery and retry tests
 │   └── test_error_recovery.py
 ├── performance/               # Performance and optimization tests
+│   └── test_large_playlist_optimizations.py    # Large playlist performance tests
 ├── debug/                     # Specialized debugging tools
 │   ├── debug_exception.py             # Exception handling diagnostics
 │   ├── debug_exception_final.py       # Enhanced exception analysis
@@ -39,6 +40,7 @@ tests/
 │   ├── debug_status_logic.py          # Status logic investigation
 │   └── README.md                      # Documentation for debug scripts
 └── audit/                     # Test audit and validation
+    └── test_audit.py                   # Comprehensive test suite audit script
 ```
 
 ### Specialized Debug Tools

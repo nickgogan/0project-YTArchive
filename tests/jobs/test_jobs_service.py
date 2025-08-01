@@ -8,7 +8,8 @@ import pytest
 from httpx import AsyncClient
 
 from services.common.base import ServiceSettings
-from services.jobs.main import JobsService
+from services.jobs.main import JobsService, JobResponse
+from services.common.models import JobType, JobStatus
 
 
 @pytest.fixture
@@ -1056,19 +1057,16 @@ async def test_process_playlist_download_full_workflow(
     # Create test job
     jobs_service.jobs_dir.mkdir(exist_ok=True)
 
-    playlist_job_data = {
-        "job_id": "playlist-test-job",
-        "job_type": "PLAYLIST_DOWNLOAD",
-        "status": "PENDING",
-        "urls": ["https://www.youtube.com/playlist?list=PLtest123"],
-        "options": {"quality": "720p", "max_concurrent": 2},
-        "created_at": "2025-07-26T12:00:00Z",
-        "updated_at": "2025-07-26T12:00:00Z",
-    }
-
-    from services.jobs.main import JobResponse
-
-    playlist_job = JobResponse(**playlist_job_data)
+    # Create JobResponse with proper enum types
+    playlist_job = JobResponse(
+        job_id="playlist-test-job",
+        job_type=JobType.PLAYLIST_DOWNLOAD,
+        status=JobStatus.PENDING,
+        urls=["https://www.youtube.com/playlist?list=PLtest123"],
+        created_at="2025-07-26T12:00:00Z",
+        updated_at="2025-07-26T12:00:00Z",
+        options={"quality": "720p", "max_concurrent": 2},
+    )
 
     # Mock playlist metadata response
     mock_playlist_metadata = {
@@ -1081,13 +1079,10 @@ async def test_process_playlist_download_full_workflow(
     }
 
     # Mock successful job execution
-    from services.common.models import JobStatus
-    from services.jobs.main import JobResponse
-
     # Create a proper JobResponse mock
     mock_completed_job = JobResponse(
         job_id="mock-job-id",
-        job_type="VIDEO_DOWNLOAD",
+        job_type=JobType.VIDEO_DOWNLOAD,
         status=JobStatus.COMPLETED,
         urls=["https://example.com/video"],
         created_at="2025-07-26T12:00:00Z",

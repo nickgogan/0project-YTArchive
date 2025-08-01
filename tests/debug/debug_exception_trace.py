@@ -5,7 +5,7 @@ Detailed exception flow tracing to understand error message transformation.
 
 import json
 from unittest.mock import patch
-from cli.main import _validate_pyproject_file, _validate_configuration
+from cli.main import _validate_configuration
 
 
 def trace_pyproject_exception():
@@ -27,7 +27,10 @@ def trace_pyproject_exception():
     print("\n2. Testing Path construction in validation function:")
     try:
         with patch("pathlib.Path", side_effect=Exception("File system error")):
-            result = _validate_pyproject_file()
+            # Note: _validate_pyproject_file was removed, using _validate_configuration instead
+            import asyncio
+
+            result = asyncio.run(_validate_configuration(json_output=False, fix=False))
             print(f"Validation result: {result}")
     except Exception as e:
         print(f"Validation function exception: {type(e).__name__}: {e}")
@@ -37,7 +40,9 @@ def trace_pyproject_exception():
     try:
         with patch("pathlib.Path") as mock_path:
             mock_path.side_effect = Exception("File system error")
-            result = _validate_pyproject_file()
+            import asyncio
+
+            result = asyncio.run(_validate_configuration(json_output=False, fix=False))
             print(f"Result with Path mock: {result}")
     except Exception as e:
         print(f"Path.exists exception: {type(e).__name__}: {e}")
@@ -53,7 +58,11 @@ def trace_pyproject_exception():
 
             # Mock open to raise our original exception
             with patch("builtins.open", side_effect=Exception("File system error")):
-                result = _validate_pyproject_file()
+                import asyncio
+
+                result = asyncio.run(
+                    _validate_configuration(json_output=False, fix=False)
+                )
                 print(f"Result with open mock: {result}")
     except Exception as e:
         print(f"File open exception: {type(e).__name__}: {e}")
@@ -70,7 +79,11 @@ def trace_pyproject_exception():
 
                 # Mock toml.load to raise the original exception
                 with patch("toml.load", side_effect=Exception("File system error")):
-                    result = _validate_pyproject_file()
+                    import asyncio
+
+                    result = asyncio.run(
+                        _validate_configuration(json_output=False, fix=False)
+                    )
                     print(f"Result with toml.load mock: {result}")
     except Exception as e:
         print(f"TOML load exception: {type(e).__name__}: {e}")

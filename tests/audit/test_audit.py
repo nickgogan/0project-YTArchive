@@ -74,6 +74,9 @@ class AuditTestFunction:
     markers: List[str]
     is_async: bool
     docstring: Optional[str] = None
+    parametrize_count: int = (
+        1  # Number of parameterized combinations (1 for non-parameterized)
+    )
 
 
 @dataclass
@@ -116,6 +119,41 @@ class SuiteAuditor:
             if test_dir.exists():
                 test_files.extend(test_dir.rglob("test_*.py"))
         return sorted(test_files)
+
+    def _count_parametrize_combinations(self, decorator_list: List[ast.expr]) -> int:
+        """Count the number of test combinations from parametrize decorators."""
+        total_combinations = 1
+
+        for decorator in decorator_list:
+            # Look for @pytest.mark.parametrize
+            if isinstance(decorator, ast.Call) and isinstance(
+                decorator.func, ast.Attribute
+            ):
+                # Check if it's pytest.mark.parametrize
+                if (
+                    isinstance(decorator.func.value, ast.Attribute)
+                    and decorator.func.value.attr == "mark"
+                    and isinstance(decorator.func.value.value, ast.Name)
+                    and decorator.func.value.value.id == "pytest"
+                    and decorator.func.attr == "parametrize"
+                ):
+                    # Get the parameter values (second argument)
+                    if len(decorator.args) >= 2:
+                        values_arg = decorator.args[
+                            1
+                        ]  # Second argument contains the parameter values
+
+                        # Count combinations based on the structure
+                        if isinstance(values_arg, ast.List):
+                            # Direct list of parameter combinations
+                            param_count = len(values_arg.elts)
+                            total_combinations *= param_count
+                        elif isinstance(values_arg, ast.Tuple):
+                            # Tuple of parameter combinations
+                            param_count = len(values_arg.elts)
+                            total_combinations *= param_count
+
+        return total_combinations
 
     def _extract_test_info_from_file(self, filepath: Path) -> Dict[str, List[str]]:
         """Extract test function names and their markers from a file."""
@@ -279,6 +317,9 @@ class SuiteAuditor:
                     ):
                         is_async = isinstance(node, ast.AsyncFunctionDef)
                         docstring = ast.get_docstring(node)
+                        parametrize_count = self._count_parametrize_combinations(
+                            node.decorator_list
+                        )
 
                         functions.append(
                             AuditTestFunction(
@@ -288,6 +329,7 @@ class SuiteAuditor:
                                 markers=markers,
                                 is_async=is_async,
                                 docstring=docstring,
+                                parametrize_count=parametrize_count,
                             )
                         )
             except Exception as e:
@@ -359,10 +401,13 @@ class SuiteAuditor:
             functions = self.extract_test_functions(file_path)
             all_test_functions.extend(functions)
 
+            # Calculate total test instances (accounting for parameterized tests)
+            total_test_instances = sum(func.parametrize_count for func in functions)
+
             test_file = AuditTestFile(
                 path=str(file_path.relative_to(self.root_path)),
                 functions=functions,
-                total_tests=len(functions),
+                total_tests=total_test_instances,
             )
             processed_files.append(test_file)
 
@@ -373,13 +418,21 @@ class SuiteAuditor:
             if not any(marker in TEST_CATEGORIES for marker in func.markers)
         ]
 
+        # Calculate uncategorized test instances (accounting for parameterized tests)
+        uncategorized_test_instances = sum(
+            func.parametrize_count for func in uncategorized_tests
+        )
+
         # Run pytest to get marker-based test counts
         pytest_marker_counts = self.get_pytest_markers()
         total_pytest_tests = self.get_pytest_total_count()
-        total_tests = len(all_test_functions)
+        # Calculate total test instances (accounting for parameterized tests)
+        total_tests = sum(func.parametrize_count for func in all_test_functions)
 
         if len(uncategorized_tests) > 0:
-            issues.append(f"Found {len(uncategorized_tests)} uncategorized tests")
+            issues.append(
+                f"Found {len(uncategorized_tests)} uncategorized test functions ({uncategorized_test_instances} test instances)"
+            )
 
         # Check for discrepancies
         if total_pytest_tests != total_tests:
@@ -391,7 +444,7 @@ class SuiteAuditor:
         return AuditResult(
             total_tests=total_tests,
             total_files=len(processed_files),
-            categorized_tests=total_tests - len(uncategorized_tests),
+            categorized_tests=total_tests - uncategorized_test_instances,
             uncategorized_tests=uncategorized_tests,
             category_counts=pytest_marker_counts,
             issues=issues,

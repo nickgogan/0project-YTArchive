@@ -5,7 +5,7 @@ Debug script to understand the "Expecting something like a string" exception err
 
 import json
 from unittest.mock import patch
-from cli.main import _validate_pyproject_file, _validate_critical_directories
+from cli.main import _validate_configuration
 
 
 def test_individual_functions_with_exception():
@@ -13,24 +13,21 @@ def test_individual_functions_with_exception():
     print("=== Testing Individual Functions with Path Exception ===")
 
     try:
-        # Test pyproject validation with Path exception
-        print("Testing _validate_pyproject_file with Path exception:")
+        # Test configuration validation with Path exception
+        print("Testing _validate_configuration with Path exception:")
         with patch("pathlib.Path", side_effect=Exception("File system error")):
-            result = _validate_pyproject_file()
-            print(f"Result: {result}")
-            print(f"JSON serializable: {json.dumps(result)}")
-    except Exception as e:
-        print(f"Exception in _validate_pyproject_file: {type(e).__name__}: {e}")
+            import asyncio
 
-    try:
-        # Test directory validation with Path exception
-        print("\nTesting _validate_critical_directories with Path exception:")
-        with patch("pathlib.Path", side_effect=Exception("File system error")):
-            result = _validate_critical_directories(fix=False)
+            result = asyncio.run(_validate_configuration(json_output=False, fix=False))
             print(f"Result: {result}")
             print(f"JSON serializable: {json.dumps(result)}")
     except Exception as e:
-        print(f"Exception in _validate_critical_directories: {type(e).__name__}: {e}")
+        print(f"Exception in _validate_configuration: {type(e).__name__}: {e}")
+
+    # Note: _validate_critical_directories was merged into _validate_configuration
+    print(
+        "\nSkipping separate directory validation - now part of _validate_configuration"
+    )
 
 
 def test_full_validation_with_exception():

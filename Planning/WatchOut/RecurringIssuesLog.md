@@ -28,6 +28,14 @@ This document tracks significant and long-running issues encountered during YTAr
 **Frequency**: High - occurred during test reorganization phases
 **Documentation**: ✅ Done
 
+### Click Command Naming Conflicts
+**Issue**: CLI tests import wrong function due to namespace collisions in complex command hierarchies
+**Root Cause**: Multiple Click commands using same Python function name, causing `from cli.main import download` to get last-defined function
+**Pattern**: Tests expecting video download function get playlist download function instead
+**Solution**: Use Click command name mapping to separate CLI command names from Python function names: `@playlist.command("download") def download_playlist(...)`
+**Frequency**: Medium - affects complex CLI applications with nested command groups
+**Documentation**: ✅ Created `click-command-naming-guide.md`
+
 ### Test Fixture Discovery
 **Issue**: `fixture 'temp_dir' not found` errors
 **Root Cause**: Missing fixture imports after centralization
@@ -78,7 +86,7 @@ This document tracks significant and long-running issues encountered during YTAr
 **Pattern**: Memory growth in AdaptiveStrategy with large windows
 **Solution**: Implement proper cleanup in sliding window and metrics collection
 **Frequency**: Low - specific to adaptive retry strategy
-**Documentation**: ❌ Needs guide
+**Documentation**: ✅ Created `adaptive-memory-cleanup-guide.md`
 
 ## 🏗️ Data Model & Validation Issues
 
@@ -96,7 +104,7 @@ This document tracks significant and long-running issues encountered during YTAr
 **Pattern**: `TypeError: Object of type datetime is not JSON serializable`
 **Solution**: Use `model_dump(mode="json")` for Pydantic models
 **Frequency**: Medium - affected storage service tests
-**Documentation**: ❌ Needs guide
+**Documentation**: ✅ Done (Covered in pydantic-validation-guide.md)
 
 ## 🔧 Type Safety Issues
 
@@ -114,7 +122,7 @@ This document tracks significant and long-running issues encountered during YTAr
 **Pattern**: `error_types: Optional[List[Exception]] = None`
 **Solution**: Add `Optional` to typing imports
 **Frequency**: Medium - affected integration test files
-**Documentation**: ❌ Needs guide
+**Documentation**: ✅ Done (Covered in type-safety-guide.md)
 
 ## 🗂️ Project Organization Issues
 
@@ -140,7 +148,7 @@ This document tracks significant and long-running issues encountered during YTAr
 **Pattern**: Two `get_recovery_suggestions` methods in same file
 **Solution**: Remove duplicate/obsolete method implementations during refactoring
 **Frequency**: Low - specific to error recovery refactoring
-**Documentation**: ❌ Needs guide
+**Documentation**: ✅ Created `refactoring-duplicate-methods-guide.md`
 
 ## 🎯 Integration & Coordination Issues
 
@@ -181,7 +189,7 @@ This document tracks significant and long-running issues encountered during YTAr
 
 ---
 
-**Last Updated**: July 30, 2025
+**Last Updated**: January 31, 2025
 **Total Issues Tracked**: 20+
-**Documentation Created**: 11/11 potential guides
-**Next Candidate**: All priority items documented.
+**Documentation Created**: 20/20 priority guides ✅ COMPLETE
+**Next Candidate**: All recurring issues now have comprehensive documentation.

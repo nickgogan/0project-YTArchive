@@ -147,9 +147,8 @@ class TestAdaptiveStrategyMemoryLeaks:
         config = RetryConfig(
             max_attempts=2000,
             base_delay=0.001,
-            window_size=1000,  # Very large window
         )
-        strategy = AdaptiveStrategy(config)
+        strategy = AdaptiveStrategy(config, window_size=1000)  # Very large window
 
         profiler.measure("after_strategy_creation")
 
@@ -431,7 +430,7 @@ class TestLongRunningRetrySequences:
         # Create multiple strategies for comprehensive testing
         strategies = {
             "adaptive": AdaptiveStrategy(
-                RetryConfig(max_attempts=1000, window_size=100)
+                RetryConfig(max_attempts=1000), window_size=100
             ),
             "exponential": ExponentialBackoffStrategy(RetryConfig(max_attempts=1000)),
             "fixed": FixedDelayStrategy(
@@ -495,7 +494,7 @@ class TestLongRunningRetrySequences:
         # Create error recovery managers for concurrent operations
         managers = []
         for i in range(10):  # 10 concurrent managers
-            strategy = AdaptiveStrategy(RetryConfig(max_attempts=200, window_size=50))
+            strategy = AdaptiveStrategy(RetryConfig(max_attempts=200), window_size=50)
             reporter = BasicErrorReporter()
             manager = ErrorRecoveryManager(strategy, reporter)
             managers.append(manager)

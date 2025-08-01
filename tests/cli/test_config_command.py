@@ -25,6 +25,7 @@ class TestConfigCommand:
             mock_print.assert_called_once()
             return json.loads(mock_print.call_args[0][0])
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_all_valid(self):
         """Test configuration validation with all settings being valid.
@@ -45,6 +46,7 @@ class TestConfigCommand:
             validation_data["environment_variables"]["YOUTUBE_API_KEY"]["set"] is True
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_missing_pyproject(self):
         """Test configuration validation with missing pyproject.toml.
@@ -60,6 +62,7 @@ class TestConfigCommand:
             validation_data["configuration_files"]["pyproject.toml"]["exists"] is False
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_missing_dependencies(self):
         """Test configuration validation with missing required dependencies.
@@ -83,6 +86,7 @@ class TestConfigCommand:
             in validation_data["issues"][0]
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_missing_pytest_markers(self):
         """Test configuration validation with missing pytest markers.
@@ -110,6 +114,7 @@ class TestConfigCommand:
             in validation_data["warnings"][0]
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_missing_critical_directories(self):
         """Test configuration validation with missing critical directories.
@@ -125,6 +130,7 @@ class TestConfigCommand:
         assert validation_data["directory_structure"]["logs"]["exists"] is False
         assert validation_data["directory_structure"]["logs/temp"]["exists"] is False
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_with_fix_flag(self):
         """Test configuration validation with auto-fix enabled.
@@ -156,6 +162,7 @@ class TestConfigCommand:
         assert validation_data["directory_structure"]["logs"]["exists"] is True
         assert validation_data["directory_structure"]["logs/temp"]["exists"] is True
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_missing_env_var(self):
         """Test configuration validation with missing environment variables.
@@ -195,6 +202,7 @@ class TestConfigCommand:
             validation_data["environment_variables"]["YOUTUBE_API_KEY"]["set"] is False
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_service_configs(self):
         """Test configuration validation of service configuration files.
@@ -230,6 +238,7 @@ class TestConfigCommand:
             in validation_data["warnings"]
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_validate_configuration_exception_handling(self):
         """Test configuration validation exception handling.

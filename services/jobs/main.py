@@ -195,7 +195,16 @@ class JobsService(BaseService):
         with open(job_file, "w") as f:
             json.dump(job_data, f, indent=2)
 
-        return JobResponse(**job_data)
+        # Create JobResponse with proper enum types
+        return JobResponse(
+            job_id=job_id,
+            job_type=request.job_type,
+            status=JobStatus.PENDING,
+            urls=request.urls,
+            created_at=now,
+            updated_at=now,
+            options=request.options,
+        )
 
     async def _get_job(self, job_id: str) -> Optional[JobResponse]:
         """Retrieve a job by ID."""
@@ -672,12 +681,13 @@ class JobsService(BaseService):
         """Fetch metadata via Metadata service."""
         metadata_url = f"http://localhost:8001/api/v1/metadata/video/{video_id}"
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(metadata_url)
+            response: httpx.Response = await client.get(metadata_url)
             if response.status_code == 200:
                 return response.json()["data"]
             else:
+                text_content = await response.text()  # type: ignore
                 raise Exception(
-                    f"Metadata service error: {response.status_code} - {response.text}"
+                    f"Metadata service error: {response.status_code} - {text_content}"
                 )
 
     async def _fetch_playlist_metadata(self, playlist_id: str) -> Dict[str, Any]:
@@ -686,14 +696,14 @@ class JobsService(BaseService):
         async with httpx.AsyncClient(
             timeout=60.0
         ) as client:  # Longer timeout for playlists
-            response = await client.get(metadata_url)
+            response: httpx.Response = await client.get(metadata_url)
             if response.status_code == 200:
                 json_data = await response.json()
                 return json_data["data"]
             else:
-                response_text = await response.text()
+                text_content = await response.text()  # type: ignore
                 raise Exception(
-                    f"Playlist metadata service error: {response.status_code} - {response_text}"
+                    f"Playlist metadata service error: {response.status_code} - {text_content}"
                 )
 
     async def _create_batch_video_jobs(
@@ -1345,7 +1355,18 @@ class JobsService(BaseService):
         with open(service_file, "w") as f:
             json.dump(service_data, f, indent=2)
 
-        return RegisteredService(**service_data)
+        # Create RegisteredService with proper datetime types
+        return RegisteredService(
+            service_name=registration.service_name,
+            host=registration.host,
+            port=registration.port,
+            health_endpoint=registration.health_endpoint,
+            description=registration.description,
+            tags=registration.tags,
+            registered_at=now,
+            last_health_check=None,
+            is_healthy=True,
+        )
 
     async def _list_services(self) -> List[RegisteredService]:
         """List all registered services."""

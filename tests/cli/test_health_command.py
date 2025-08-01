@@ -43,6 +43,7 @@ class TestHealthCommand:
             elapsed=MagicMock(total_seconds=MagicMock(return_value=0.1)),
         )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_check_system_health_all_services_healthy(
         self, mock_ytarchive_api, mock_health_response
@@ -83,6 +84,7 @@ class TestHealthCommand:
                     assert service_name in health_data["services"]
                     assert health_data["services"][service_name]["status"] == "healthy"
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_check_system_health_service_unavailable(self, mock_ytarchive_api):
         """Test health check when a service is unavailable."""
@@ -123,6 +125,7 @@ class TestHealthCommand:
                     "Connection refused" in health_data["services"]["metadata"]["error"]
                 )
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_check_system_health_service_unhealthy_status(
         self, mock_ytarchive_api, mock_unhealthy_response
@@ -161,6 +164,7 @@ class TestHealthCommand:
                 assert health_data["services"]["storage"]["status"] == "unhealthy"
                 assert "HTTP 500" in health_data["services"]["storage"]["error"]
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     @patch("cli.main.psutil", autospec=True)
     async def test_check_system_health_detailed_mode(
@@ -185,6 +189,7 @@ class TestHealthCommand:
         assert "system" in health_data
         assert health_data["system"]["cpu_percent"] == 25.5
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_check_system_health_missing_critical_directories(
         self, mock_ytarchive_api, mock_health_response
@@ -217,6 +222,7 @@ class TestHealthCommand:
                     assert "Critical directory missing: logs" in issues_text
                     assert "Critical directory missing: logs/temp" in issues_text
 
+    @pytest.mark.service
     @pytest.mark.asyncio
     async def test_check_system_health_exception_handling(self, mock_ytarchive_api):
         """Test health check exception handling."""
@@ -235,6 +241,7 @@ class TestHealthCommand:
                 assert error_data["overall_status"] == "error"
                 assert "API initialization failed" in error_data["error"]
 
+    @pytest.mark.service
     def test_display_health_status_healthy_system(self):
         """Test display of healthy system status."""
         health_data = {
@@ -257,6 +264,7 @@ class TestHealthCommand:
             status_calls = [call for call in calls if "System Status: HEALTHY" in call]
             assert len(status_calls) == 1
 
+    @pytest.mark.service
     def test_display_health_status_with_issues(self):
         """Test display of system status with issues."""
         health_data = {
@@ -279,6 +287,7 @@ class TestHealthCommand:
             issue_calls = [call for call in calls if "Issues Detected" in call]
             assert len(issue_calls) == 1
 
+    @pytest.mark.service
     def test_display_health_status_with_system_info(self):
         """Test display of system status with detailed system information."""
         health_data = {

@@ -85,9 +85,9 @@ class EnhancedDownloadService(BaseService):
         """Download video with advanced error recovery."""
 
         context = ErrorContext(
+            operation_name="download_video",
             video_id=video_id,
             service_name=self.service_name,
-            operation="download_video",
             user_config={"quality": quality},
         )
 

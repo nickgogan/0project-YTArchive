@@ -113,10 +113,10 @@ class CircuitBreakerStrategy(RetryStrategy):
 class AdaptiveStrategy(RetryStrategy):
     """Adaptive retry strategy that adjusts based on recent success rate."""
 
-    def __init__(self, config: RetryConfig):
+    def __init__(self, config: RetryConfig, window_size: int = 10):
         self.config = config
         self.recent_attempts: List[bool] = []  # Track recent success/failure
-        self.adaptation_window = 10
+        self.adaptation_window = window_size
 
         # Metrics
         self.total_attempts = 0

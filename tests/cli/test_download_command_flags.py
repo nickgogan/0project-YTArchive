@@ -33,6 +33,7 @@ class TestDownloadCommandFlags:
             ],
         }
 
+    @pytest.mark.service
     def test_format_list_displays_table(self, mock_video_formats):
         """Test --format-list flag triggers API call and displays a table."""
         runner = CliRunner()
@@ -54,6 +55,7 @@ class TestDownloadCommandFlags:
             assert "Premium" in result.output
             assert "Audio Formats" in result.output
 
+    @pytest.mark.service
     def test_format_list_displays_json(self, mock_video_formats):
         """Test --format-list with --json flag produces correct JSON output."""
         runner = CliRunner()
@@ -94,6 +96,7 @@ class TestDownloadCommandFlags:
             ),
         ],
     )
+    @pytest.mark.service
     def test_retry_config_flag_passes_correct_config(
         self, strategy_param, expected_retry_config
     ):
@@ -124,6 +127,16 @@ class TestDownloadCommandFlags:
             mock_api_instance.monitor_job = AsyncMock(
                 return_value={"job_id": "job-123", "status": "completed"}
             )
+            # ✅ WatchOut Pattern: Mock all async API methods that get called
+            mock_api_instance.execute_job = AsyncMock(
+                return_value={"task_id": "task-456", "status": "started"}
+            )
+            mock_api_instance.get_download_progress = AsyncMock(
+                return_value={
+                    "state": "SUCCESS",
+                    "result": {"output_path": "/tmp/video.mp4"},
+                }
+            )
 
             result = runner.invoke(
                 download, ["--retry-config", strategy_param, "test_video_id"]
@@ -145,6 +158,7 @@ class TestDownloadCommandFlags:
             assert job_config.get("quality") == "best"  # Default quality
             assert "output_path" in job_config
 
+    @pytest.mark.service
     def test_retry_config_flag_invalid_strategy(self):
         """Test --retry-config flag with invalid strategy."""
         runner = CliRunner()
@@ -155,6 +169,7 @@ class TestDownloadCommandFlags:
         assert result.exit_code != 0
         assert "Invalid value for '--retry-config'" in result.output
 
+    @pytest.mark.service
     def test_format_list_flag_api_error_handling(self):
         """Test --format-list flag with API error handling."""
         runner = CliRunner()
