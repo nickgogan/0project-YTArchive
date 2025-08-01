@@ -352,6 +352,7 @@ def cli():
 )
 @click.option(
     "--json",
+    "json_output",  # Explicitly map --json to json_output parameter
     is_flag=True,
     help="Output format list in JSON format",
 )
