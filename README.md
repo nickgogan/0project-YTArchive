@@ -6,6 +6,7 @@
 [![Memory Tests](https://img.shields.io/badge/memory%20leaks-0%20detected-brightgreen)](https://github.com/ytarchive/ytarchive)
 [![Integration Tests](https://img.shields.io/badge/integration-comprehensive-brightgreen)](https://github.com/ytarchive/ytarchive)
 [![Retry System](https://img.shields.io/badge/retry%20coordination-enterprise%20grade-brightgreen)](https://github.com/ytarchive/ytarchive)
+[![Code Quality](https://img.shields.io/badge/pre--commit-systematic%20debugging-brightgreen)](https://github.com/ytarchive/ytarchive)
 [![Production Ready](https://img.shields.io/badge/production-ready-brightgreen)](https://github.com/ytarchive/ytarchive)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://python.org)
 
@@ -19,7 +20,7 @@
 - ✅ **Robust Retry Coordination**: Enterprise-grade cross-service retry orchestration
 - ✅ **Organized Infrastructure**: 100% organized test structure with centralized logging
 - ✅ **Production Validation**: All tests mirror real-world production scenarios
-- ✅ **Code Quality**: Perfect linting, type checking, and import organization
+- ✅ **Code Quality**: Perfect linting, type checking, and systematic pre-commit debugging
 - ✅ **Enterprise Ready**: Comprehensive failure recovery and monitoring
 
 ## 🚀 Features
@@ -159,10 +160,19 @@ uv run pytest tests/integration/test_metadata_retry_integration.py -v
 
 ## 📖 Documentation
 
+### User Documentation
 - **[User Guide](docs/user-guide.md)** - Complete usage guide with examples
 - **[API Documentation](docs/api-documentation.md)** - Full REST API reference
 - **[Deployment Guide](docs/deployment-guide.md)** - Production deployment instructions
 - **[Configuration Reference](docs/configuration-reference.md)** - Complete configuration guide
+
+### Developer Documentation
+- **[Testing Guide](docs/testing-guide.md)** - Comprehensive testing procedures and code quality standards
+- **[WatchOut Guides](Planning/WatchOut/)** - Advanced debugging patterns and systematic troubleshooting
+  - `pre-commit-debugging-guide.md` - Systematic approach to resolving pre-commit hook failures
+  - `type-safety-guide.md` - Best practices for MyPy compliance and type safety
+  - `refactoring-duplicate-methods-guide.md` - Handling duplicate function definitions
+- **[Implementation Guide](Planning/ImplementationGuide.md)** - Development workflow and architecture standards
 
 ## 🚀 Production Deployment
 
@@ -181,21 +191,31 @@ tail -f logs/ytarchive.log
 
 ## 🤝 Contributing
 
-We maintain **enterprise-grade quality standards**:
+We maintain **enterprise-grade quality standards** with systematic debugging support:
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
 3. **Run tests**: `uv run pytest` (ensure 100% pass rate)
 4. **Run memory tests**: `uv run pytest -m memory` (ensure zero leaks)
-5. **Commit changes**: `git commit -m 'Add amazing feature'`
-6. **Push to branch**: `git push origin feature/amazing-feature`
-7. **Open a Pull Request**
+5. **Validate code quality**: `uv run pre-commit run --all-files`
+6. **Commit changes**: `git commit -m 'Add amazing feature'`
+7. **Push to branch**: `git push origin feature/amazing-feature`
+8. **Open a Pull Request**
 
 ### Quality Requirements
 - All tests must pass (169/169)
 - Memory tests must pass (31/31)
+- All pre-commit hooks must pass (Ruff ✅ | Black ✅ | MyPy ✅)
 - Zero warnings or failures
 - Production-ready code quality
+
+### Development Support
+If you encounter pre-commit hook failures, we provide **systematic debugging support**:
+- **[Pre-commit Debugging Guide](Planning/WatchOut/pre-commit-debugging-guide.md)** - Step-by-step resolution workflow
+- **[Type Safety Guide](Planning/WatchOut/type-safety-guide.md)** - MyPy compliance patterns and solutions
+- **[Testing Guide](docs/testing-guide.md)** - Code quality standards and common issue resolution
+
+**No more trial-and-error debugging** - our documentation provides proven patterns for rapid issue resolution.
 
 ## 📝 License
 
