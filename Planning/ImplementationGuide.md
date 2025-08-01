@@ -584,3 +584,56 @@ class MockService:
 5. Validate all inputs
 6. Report progress for long operations
 7. Use exponential backoff for retries
+
+## Code Quality & Pre-commit Hooks
+
+### Type Safety Standards
+- **Always import explicit types**: `from typing import Dict, List, Any, Optional`
+- **Use mutable type annotations**: `result: Dict[str, Any] = {}` not `Collection[str]`
+- **Avoid parameter shadowing**: Use `json_output`, not `json`
+- **Pass Python objects to Pydantic**: `JobType.VIDEO_DOWNLOAD`, not `"VIDEO_DOWNLOAD"`
+
+### Pre-commit Hook Debugging Workflow
+1. **Get full scope**: `uv run pre-commit run --all-files`
+2. **Categorize errors**: Group by Ruff F811, MyPy types, formatting
+3. **Resolve by priority**: Blocking errors first (F811, F821), then type safety
+4. **Use pattern matching**: Apply common solutions from WatchOut guides
+5. **Validate iteratively**: Test specific hooks after fixes
+
+### Quick Reference - Common Fixes
+
+**Ruff F811 Redefinition**:
+```python
+# Use Click command name mapping
+@group.command("status")  # CLI name
+def group_status(...):    # Python function name
+```
+
+**MyPy Collection Type Issues**:
+```python
+# Explicit mutable type annotation
+result: Dict[str, Any] = {"items": [], "status": "ok"}
+```
+
+**Pydantic Constructor Issues**:
+```python
+# Pass Python objects, not strings
+return JobResponse(
+    job_type=JobType.VIDEO_DOWNLOAD,  # Enum, not "VIDEO_DOWNLOAD"
+    status=JobStatus.PENDING,         # Enum, not "PENDING"
+    created_at=datetime.now()         # datetime, not ISO string
+)
+```
+
+**Parameter Shadowing**:
+```python
+# Use descriptive names
+@click.option("--json", "json_output", is_flag=True)
+def command(json_output: bool):  # Not json: bool
+```
+
+### Documentation References
+- **Pre-commit Issues**: `Planning/WatchOut/pre-commit-debugging-guide.md`
+- **Type Safety**: `Planning/WatchOut/type-safety-guide.md`
+- **Duplicate Methods**: `Planning/WatchOut/refactoring-duplicate-methods-guide.md`
+- **Recurring Issues**: `Planning/WatchOut/RecurringIssuesLog.md`

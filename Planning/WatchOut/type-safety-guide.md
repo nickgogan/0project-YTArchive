@@ -167,4 +167,147 @@ To ensure MyPy can find your type stubs when using UV:
 
 > **⚠️ WatchOut!** Even when type stubs are correctly installed, environment mismatches can cause MyPy to report "Library stubs not installed" errors. For detailed troubleshooting, see our [MyPy UV Environment Mismatch Guide](./mypy-uv-environment-mismatch.md).
 
+## 6. Advanced Type Issues: Collection vs Mutable Types
+
+**Problem**: MyPy infers dictionary literals as `Collection[str]` which doesn't support mutable operations.
+
+**Error Messages**:
+- `Unsupported target for indexed assignment ("Collection[str]")`
+- `"Collection[str]" has no attribute "append"`
+
+**Root Cause**: `Collection` is an abstract base class that doesn't guarantee mutability.
+
+### Issue 3: Dictionary Type Inference
+
+#### Incorrect Pattern
+```python
+# ❌ WRONG: MyPy may infer this as Collection, not Dict
+def validate_config():
+    result = {
+        "status": "valid",
+        "issues": [],        # List that needs .append()
+        "warnings": [],      # List that needs .append()
+        "configs": {}        # Dict that needs item assignment
+    }
+
+    result["issues"].append("error")      # ❌ MyPy error if Collection
+    result["configs"]["new_key"] = "val"  # ❌ MyPy error if Collection
+    return result
+```
+
+#### Correct Pattern
+```python
+# ✅ CORRECT: Explicitly type as mutable Dict
+from typing import Dict, List, Any
+
+def validate_config() -> Dict[str, Any]:
+    result: Dict[str, Any] = {
+        "status": "valid",
+        "issues": [],
+        "warnings": [],
+        "configs": {}
+    }
+
+    result["issues"].append("error")      # ✅ Works - Dict[str, Any]
+    result["configs"]["new_key"] = "val"  # ✅ Works - Dict[str, Any]
+    return result
+```
+
+**Key Solution**: Always import and use specific mutable types:
+```python
+from typing import Dict, List, Any, Optional
+```
+
+## 7. Pydantic Model Constructor Type Safety
+
+**Problem**: Passing serialized string values instead of proper Python objects to Pydantic model constructors.
+
+**Error Message**: `Argument 1 to "ModelName" has incompatible type "**dict[str, ...]"; expected "str"`
+
+### Issue 4: Model Constructor Type Mismatches
+
+#### Incorrect Pattern
+```python
+# ❌ WRONG: Passing string representations
+job_data = {
+    "job_id": "test-123",
+    "job_type": "VIDEO_DOWNLOAD",           # String, not enum!
+    "status": "PENDING",                    # String, not enum!
+    "created_at": "2025-01-31T12:00:00Z",  # String, not datetime!
+    "options": {"quality": "720p"}
+}
+
+# This fails because Pydantic expects Python objects
+return JobResponse(**job_data)  # ❌ MyPy error!
+```
+
+#### Correct Pattern
+```python
+# ✅ CORRECT: Pass proper Python objects
+from services.common.models import JobType, JobStatus
+from datetime import datetime
+
+# Explicit constructor with proper types
+return JobResponse(
+    job_id="test-123",
+    job_type=JobType.VIDEO_DOWNLOAD,    # Enum object
+    status=JobStatus.PENDING,           # Enum object
+    created_at=datetime.now(),          # datetime object
+    options={"quality": "720p"},
+)
+```
+
+**Key Principle**: Pydantic models expect Python objects, not their serialized string representations.
+
+## 8. Parameter Name Shadowing Prevention
+
+**Problem**: Parameter names that shadow imported modules cause confusing attribute errors.
+
+**Error Message**: `"bool" has no attribute "dumps"` (when `json` parameter shadows `json` module)
+
+### Issue 5: Built-in and Module Shadowing
+
+#### Incorrect Pattern
+```python
+# ❌ WRONG: Parameter shadows json module
+import json
+
+@click.option("--json", is_flag=True)
+def process_data(data: Dict, json: bool):  # Shadows json module!
+    if json:
+        return json.dumps(data)  # ❌ Tries to call bool.dumps()!
+```
+
+#### Correct Pattern
+```python
+# ✅ CORRECT: Use descriptive, non-shadowing parameter names
+import json
+
+@click.option("--json", "json_output", is_flag=True)  # Map to different name
+def process_data(data: Dict, json_output: bool):
+    if json_output:
+        return json.dumps(data)  # ✅ Uses json module correctly
+```
+
+**Safe Parameter Naming Patterns**:
+```python
+# Common shadowing issues and solutions
+json_output, json_format     # Instead of 'json'
+string_value, text_content   # Instead of 'str'
+item_list, values, items     # Instead of 'list'
+data_dict, mapping, config   # Instead of 'dict'
+type_name, object_type       # Instead of 'type'
+```
+
+## 9. Type Safety Checklist
+
+Before committing code, verify:
+
+- [ ] All dictionary/list literals have explicit type annotations when used mutably
+- [ ] Pydantic model constructors receive Python objects, not string representations
+- [ ] No parameter names shadow built-in modules or functions
+- [ ] All `from typing import` statements include necessary types (`Dict`, `List`, `Any`)
+- [ ] `isinstance()` used for type narrowing instead of `getattr()` with `Any`
+- [ ] All `Optional` imports are present when using `Optional[Type]`
+
 By following these guidelines, we can maintain a high level of code quality, reduce runtime errors, and create a more maintainable and self-documenting codebase.

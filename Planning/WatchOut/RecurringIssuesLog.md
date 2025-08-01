@@ -108,7 +108,39 @@ This document tracks significant and long-running issues encountered during YTAr
 
 ## 🔧 Type Safety Issues
 
-### MyPy Type Checking Errors
+### Pre-commit Hook Complex Failures
+**Issue**: Multiple failing pre-commit hooks creating complex debugging scenarios requiring systematic resolution
+**Root Cause**: Interdependent errors across Ruff F811, MyPy type issues, constructor mismatches, parameter shadowing
+**Patterns**: F811 redefinitions, Collection[str] type errors, Pydantic constructor issues, json parameter shadowing
+**Solution**: Use systematic debugging workflow - categorize errors by type, resolve in priority order, use pattern-based fixes
+**Frequency**: High during major refactoring, dependency updates, or large feature additions
+**Documentation**: ✅ Created `pre-commit-debugging-guide.md`
+
+### MyPy Collection vs Mutable Type Issues
+**Issue**: MyPy inferring dict literals as `Collection[str]` instead of mutable `Dict[str, Any]`
+**Root Cause**: Type inference choosing abstract Collection over concrete mutable types
+**Patterns**: `"Collection[str]" has no attribute "append"`, `Unsupported target for indexed assignment`
+**Solution**: Explicit type annotations: `result: Dict[str, Any] = {...}` with proper imports
+**Frequency**: High - affects data processing functions with dictionary operations
+**Documentation**: ✅ Enhanced `type-safety-guide.md` with Collection vs Dict patterns
+
+### Pydantic Constructor Type Mismatches
+**Issue**: MyPy errors when passing dict with string values to Pydantic constructors expecting Python objects
+**Root Cause**: Pydantic models expect enum/datetime objects, not serialized string representations
+**Patterns**: `Argument 1 to "JobResponse" has incompatible type "**dict[str, ...]"; expected "str"`
+**Solution**: Pass Python objects directly: `JobType.VIDEO_DOWNLOAD` not `"VIDEO_DOWNLOAD"`
+**Frequency**: Medium - affects service model constructors and test data creation
+**Documentation**: ✅ Enhanced `type-safety-guide.md` with Pydantic constructor patterns
+
+### Parameter Name Shadowing
+**Issue**: Function parameters shadowing built-in modules causing confusing attribute errors
+**Root Cause**: Parameters named `json`, `str`, `list`, etc. shadow imported modules/built-ins
+**Patterns**: `"bool" has no attribute "dumps"` when `json` parameter shadows `json` module
+**Solution**: Use descriptive parameter names: `json_output`, `string_value`, `item_list`
+**Frequency**: Medium - affects CLI commands and utility functions with generic parameter names
+**Documentation**: ✅ Enhanced `type-safety-guide.md` with parameter shadowing patterns
+
+### MyPy Type Checking Errors (Legacy)
 **Issue**: MyPy errors for `Any` type returns from `getattr()`
 **Root Cause**: Dynamic attribute access returning `Any` type
 **Pattern**: `getattr(strategy_config, 'field')` causing type errors
