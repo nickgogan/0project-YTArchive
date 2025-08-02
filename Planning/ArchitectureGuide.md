@@ -98,9 +98,14 @@ This document captures all architectural decisions and design choices made for t
 ## Configuration Management
 
 ### Configuration Strategy
-- **Decision**: TOML configuration file with environment variable overrides
-- **Rationale**: TOML is Python-friendly, supports complex structures
+- **Decision**: Single TOML configuration file with environment variable overrides
+- **Rationale**: TOML is Python-friendly, supports complex structures, simple for personal use
 - **Alternative Rejected**: YAML (parsing complexity), JSON (no comments)
+
+### Environment Strategy
+- **Decision**: Single environment configuration (development/personal use)
+- **Rationale**: YTArchive is designed for personal use, eliminates multi-environment complexity
+- **Alternative Rejected**: Multi-environment support (dev/staging/production - unnecessary complexity)
 
 ## API Design
 
@@ -235,3 +240,4 @@ This document captures all architectural decisions and design choices made for t
 | 2024-01-22 | No caching in v1 | Reduce complexity for initial implementation |
 | 2024-01-22 | Monorepo structure | Easier dependency management |
 | 2024-01-22 | Centralized logging service | Single place to query all service logs |
+| 2025-01-31 | Single environment configuration | Personal use project, eliminate multi-env complexity |
