@@ -246,7 +246,7 @@ class TestConfigCommand:
         Following WatchOut pattern: exception scenario testing.
         """
         # Force an exception by making Path construction fail
-        with patch("pathlib.Path", side_effect=Exception("File system error")), patch(
+        with patch("cli.main.Path", side_effect=Exception("File system error")), patch(
             "cli.main.console.print"
         ) as mock_print:
             await _validate_configuration(json_output=True, fix=False)
