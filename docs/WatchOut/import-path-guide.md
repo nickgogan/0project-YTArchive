@@ -78,7 +78,7 @@ YTArchive/
 │   └── storage/            # Storage service tests
 │       ├── __init__.py
 │       └── test_*.py
-├── Planning/               # Project documentation
+├── Planning/               # Project management & requirements
 └── ytarchive.py           # Main entry point
 ```
 

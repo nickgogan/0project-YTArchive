@@ -160,6 +160,8 @@ uv run pytest tests/integration/test_metadata_retry_integration.py -v
 
 ## 📖 Documentation
 
+> **Perfect Organization**: All "how to" guides are in `docs/`, all project planning is in `Planning/`
+
 ### User Documentation
 - **[User Guide](docs/user-guide.md)** - Complete usage guide with examples
 - **[API Documentation](docs/api-documentation.md)** - Full REST API reference
@@ -167,12 +169,17 @@ uv run pytest tests/integration/test_metadata_retry_integration.py -v
 - **[Configuration Reference](docs/configuration-reference.md)** - Complete configuration guide
 
 ### Developer Documentation
+- **[Development Guide](docs/development-guide.md)** - Development workflow and architecture standards
 - **[Testing Guide](docs/testing-guide.md)** - Comprehensive testing procedures and code quality standards
 - **[WatchOut Guides](docs/WatchOut/)** - Advanced debugging patterns and systematic troubleshooting
   - `pre-commit-debugging-guide.md` - Systematic approach to resolving pre-commit hook failures
   - `type-safety-guide.md` - Best practices for MyPy compliance and type safety
   - `refactoring-duplicate-methods-guide.md` - Handling duplicate function definitions
-- **[Development Guide](docs/development-guide.md)** - Development workflow and architecture standards
+  - *(21 total technical troubleshooting guides)*
+
+### Documentation Maintenance
+- **[Documentation Maintenance Guide](docs/docs-maintenance.md)** - How to keep docs/ current and accurate
+- **[Project Status Updates Guide](Planning/ProjectStatusUpdatesGuide.md)** - How to maintain Planning/ documents
 
 ## 🚀 Production Deployment
 
