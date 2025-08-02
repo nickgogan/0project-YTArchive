@@ -1,6 +1,6 @@
-# YTArchive Implementation Guide
+# YTArchive Development Guide
 
-This document consolidates all technical implementation details for the YTArchive project.
+This document provides comprehensive technical implementation details and development guidelines for the YTArchive project.
 
 ## Table of Contents
 1. [Data Persistence Strategy](#data-persistence-strategy)
@@ -14,6 +14,7 @@ This document consolidates all technical implementation details for the YTArchiv
 9. [File Handling Conventions](#file-handling-conventions)
 10. [Validation Rules](#validation-rules)
 11. [Testing Strategy](#testing-strategy)
+12. [Development Standards & Guidelines](#development-standards--guidelines)
 
 ## Data Persistence Strategy
 
@@ -633,7 +634,42 @@ def command(json_output: bool):  # Not json: bool
 ```
 
 ### Documentation References
-- **Pre-commit Issues**: `Planning/WatchOut/pre-commit-debugging-guide.md`
-- **Type Safety**: `Planning/WatchOut/type-safety-guide.md`
-- **Duplicate Methods**: `Planning/WatchOut/refactoring-duplicate-methods-guide.md`
-- **Recurring Issues**: `Planning/WatchOut/RecurringIssuesLog.md`
+- **Pre-commit Issues**: `docs/WatchOut/pre-commit-debugging-guide.md`
+- **Type Safety**: `docs/WatchOut/type-safety-guide.md`
+- **Duplicate Methods**: `docs/WatchOut/refactoring-duplicate-methods-guide.md`
+- **Recurring Issues**: `Planning/RecurringIssuesLog.md`
+
+---
+
+## Development Standards & Guidelines
+
+### Code Standards
+
+1. All code must pass `mypy --strict`
+2. Test coverage minimum: 80%
+3. All public APIs must have docstrings
+4. Use type hints throughout
+
+### Testing Strategy
+
+1. Unit tests for all business logic
+2. Integration tests for service communication
+3. End-to-end tests for critical paths
+4. Mock external dependencies (YouTube API, file system)
+
+### Definition of Done
+
+For every feature implementation, ensure:
+
+- [ ] Feature is implemented and working
+- [ ] Unit tests written and passing
+- [ ] Integration tests updated
+- [ ] Documentation updated
+- [ ] Code reviewed (self-review for solo project)
+- [ ] No linting errors
+- [ ] Type checking passes
+
+### Documentation Maintenance
+
+- **Planning Documents**: See `Planning/ProjectStatusUpdatesGuide.md` for maintaining Planning/ documents
+- **User Documentation**: See `docs/docs-maintenance.md` for maintaining docs/ directory

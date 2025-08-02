@@ -245,6 +245,80 @@ POST /api/work-plan
 - Python 3.11+ environment
 - uv package manager
 
+## Documentation Architecture
+
+YTArchive uses a structured documentation approach designed to serve different audiences and purposes throughout the project lifecycle. The Planning/ directory contains key documents that work together to provide comprehensive project information.
+
+### Document Structure & Purposes
+
+#### 📋 **ImplementationPlan.md** - "Current Status & Next Steps"
+**Purpose**: Single source of truth for project status and planning
+**Audience**: Developers, contributors, project leads
+**Content Focus**:
+- Current implementation status with completion tracking
+- Future features backlog with actionable tasks
+- Roadmap and next steps
+- Implementation guidelines and standards
+
+#### 📜 **CHANGELOG.md** - "Historical Record"
+**Purpose**: Complete historical record of project milestones and implementation
+**Audience**: Stakeholders, new contributors, project historians
+**Content Focus**:
+- Chronological achievements with detailed context
+- Phase-by-phase development history
+- Technical implementation details and decisions
+- Achievement narratives with metrics and impact
+
+#### 🏗️ **docs/development-guide.md** - "Technical Standards"
+**Purpose**: Technical standards and implementation patterns
+**Audience**: Developers implementing new features
+**Content Focus**:
+- Code standards and development practices
+- Testing strategies and requirements
+- Architecture patterns and guidelines
+
+#### 📚 **Supporting Documents**
+- **PRD.md** (this document): Project requirements and system overview
+- **ArchitectureGuide.md**: System design and architecture decisions
+- **ServiceSpecifications/**: Individual service API contracts and designs
+- **WatchOut/**: Problem-solving patterns and debugging guides
+
+#### 🛠️ **Documentation Maintenance Guides**
+- **ProjectStatusUpdatesGuide.md**: Procedures for maintaining Planning/ documents (status tracking, planning updates)
+- **docs/docs-maintenance.md**: Procedures for maintaining docs/ directory (user guides, API docs, deployment guides)
+
+### Document Relationship Flow
+
+```
+PRD.md (What to build)
+    ↓
+docs/development-guide.md (How to build it)
+    ↓
+ImplementationPlan.md (Current status & what's next)
+    ↓
+CHANGELOG.md (What was built & how)
+
+ServiceSpecifications/ ←→ All documents (API contracts)
+WatchOut/ ←→ All documents (Problem-solving patterns)
+```
+
+### Documentation Principles
+
+**Clear Separation**: Each document serves a distinct purpose and audience, minimizing overlap while maximizing value.
+
+**Forward vs. Backward Focus**:
+- ImplementationPlan.md looks ahead (current state + next steps)
+- CHANGELOG.md looks back (historical achievements + context)
+
+**Audience-Driven Content**:
+- New contributors read PRD + ImplementationPlan for current project understanding
+- Active developers use ImplementationGuide + ServiceSpecifications for implementation
+- Stakeholders and historians reference CHANGELOG for project journey
+
+**Living Documentation**: Documents evolve with the project while maintaining their core purposes and historical value.
+
+---
+
 ## Appendix
 
 ### API Quota Calculations

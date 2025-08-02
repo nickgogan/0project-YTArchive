@@ -272,10 +272,10 @@ We use pre-commit hooks to ensure code quality standards are maintained on every
 
 For comprehensive documentation on type safety in this project, refer to these WatchOut guides:
 
-- `Planning/WatchOut/type-safety-guide.md`: Best practices for ensuring type safety with MyPy
-- `Planning/WatchOut/pre-commit-debugging-guide.md`: Systematic approach to resolving pre-commit hook failures
-- `Planning/WatchOut/refactoring-duplicate-methods-guide.md`: Handling duplicate function definitions during refactoring
-- `Planning/WatchOut/mypy-uv-environment-mismatch.md`: Troubleshooting environment integration issues
+- `docs/WatchOut/type-safety-guide.md`: Best practices for ensuring type safety with MyPy
+- `docs/WatchOut/pre-commit-debugging-guide.md`: Systematic approach to resolving pre-commit hook failures
+- `docs/WatchOut/refactoring-duplicate-methods-guide.md`: Handling duplicate function definitions during refactoring
+- `docs/WatchOut/mypy-uv-environment-mismatch.md`: Troubleshooting environment integration issues
 
 **Essential Type Safety Imports for Tests**:
 ```python
@@ -307,7 +307,7 @@ uv run pre-commit run mypy --all-files
 2. **Type safety errors** (MyPy constructor, import issues)
 3. **Enhancement errors** (external library stubs)
 
-For comprehensive pre-commit debugging, see: `Planning/WatchOut/pre-commit-debugging-guide.md`
+For comprehensive pre-commit debugging, see: `docs/WatchOut/pre-commit-debugging-guide.md`
 
 #### Type Safety in Tests
 

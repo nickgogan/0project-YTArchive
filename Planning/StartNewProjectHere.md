@@ -221,7 +221,7 @@ This guide captures a proven workflow for developing Python-based API projects u
    - System design overview
    - Decision rationale
 
-3. **ImplementationGuide.md**
+3. **docs/development-guide.md**
    - Technical patterns
    - Coding standards
    - Common utilities
@@ -263,10 +263,11 @@ project-root/
 │   └── fixtures/
 ├── scripts/
 ├── docs/
+│   ├── development-guide.md
+│   └── user-guide.md
 ├── Planning/
 │   ├── PRD.md
 │   ├── ArchitectureGuide.md
-│   ├── ImplementationGuide.md
 │   └── ServiceSpecifications/
 ├── config/
 ├── pyproject.toml
@@ -347,7 +348,7 @@ project-root/
 Planning/
 ├── PRD.md                    # Business requirements
 ├── ArchitectureGuide.md      # High-level decisions
-├── ImplementationGuide.md    # Technical details
+├── docs/development-guide.md    # Technical details
 ├── FutureFeatures.md         # Deferred items
 ├── ServiceSpecifications/    # Individual services
 │   ├── service1.md

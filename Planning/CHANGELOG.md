@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **MyPy Collection vs Mutable Type Issues**: Type inference patterns
   - **Pydantic Constructor Type Mismatches**: Constructor parameter patterns
   - **Parameter Name Shadowing**: Module shadowing prevention
-- **ENHANCED: `ImplementationGuide.md`**: New "Code Quality & Pre-commit Hooks" section
+- **ENHANCED: `docs/development-guide.md`**: New "Code Quality & Pre-commit Hooks" section
   - **Type Safety Standards**: Daily development rules
   - **Quick Reference**: Immediate problem-solving patterns
   - **Cross-references**: Complete WatchOut guide integration
@@ -47,8 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Prevention Strategies**: Development practices and code review checklists
 - **🛡️ Prevention System**: Three-tier documentation approach
   - **Quick Reference**: `docs/testing-guide.md` for immediate solutions
-  - **Deep Dive**: `Planning/WatchOut/*.md` for comprehensive patterns
-  - **Standards**: `Planning/ImplementationGuide.md` for development workflow
+  - **Deep Dive**: `docs/WatchOut/*.md` for comprehensive patterns
+  - **Standards**: `docs/development-guide.md` for development workflow
 
 #### 🚀 **IMPACT & FUTURE PREVENTION**
 - **Proactive Prevention**: Type safety standards and parameter naming conventions built into workflow
@@ -698,7 +698,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidated planning documentation to eliminate overlap
 - Renamed and reorganized planning files for clarity:
   - ArchitectureDecisions.md → ArchitectureGuide.md (high-level only)
-  - DesignDecisions.md → merged into ImplementationGuide.md
+  - DesignDecisions.md → merged into docs/development-guide.md
   - DeferredDesignDetails.md → FutureFeatures.md (future only)
   - ServicesSpecification.md → individual files in ServiceSpecifications/
 - Updated service models to use proper typing and Pydantic BaseModel
@@ -766,7 +766,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Separated concerns**: Architecture vs Implementation vs Service specs
 - **Eliminated overlap**: Each document has distinct purpose
 - **Created service specifications**: Individual docs for each service
-- **Consolidated implementation details**: Single source of truth in ImplementationGuide.md
+- **Consolidated implementation details**: Single source of truth in docs/development-guide.md
 - **Archived redundant files**: Moved to Planning/Archive/
 
 ---

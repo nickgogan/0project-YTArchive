@@ -168,11 +168,11 @@ uv run pytest tests/integration/test_metadata_retry_integration.py -v
 
 ### Developer Documentation
 - **[Testing Guide](docs/testing-guide.md)** - Comprehensive testing procedures and code quality standards
-- **[WatchOut Guides](Planning/WatchOut/)** - Advanced debugging patterns and systematic troubleshooting
+- **[WatchOut Guides](docs/WatchOut/)** - Advanced debugging patterns and systematic troubleshooting
   - `pre-commit-debugging-guide.md` - Systematic approach to resolving pre-commit hook failures
   - `type-safety-guide.md` - Best practices for MyPy compliance and type safety
   - `refactoring-duplicate-methods-guide.md` - Handling duplicate function definitions
-- **[Implementation Guide](Planning/ImplementationGuide.md)** - Development workflow and architecture standards
+- **[Development Guide](docs/development-guide.md)** - Development workflow and architecture standards
 
 ## 🚀 Production Deployment
 
@@ -211,8 +211,8 @@ We maintain **enterprise-grade quality standards** with systematic debugging sup
 
 ### Development Support
 If you encounter pre-commit hook failures, we provide **systematic debugging support**:
-- **[Pre-commit Debugging Guide](Planning/WatchOut/pre-commit-debugging-guide.md)** - Step-by-step resolution workflow
-- **[Type Safety Guide](Planning/WatchOut/type-safety-guide.md)** - MyPy compliance patterns and solutions
+- **[Pre-commit Debugging Guide](docs/WatchOut/pre-commit-debugging-guide.md)** - Step-by-step resolution workflow
+- **[Type Safety Guide](docs/WatchOut/type-safety-guide.md)** - MyPy compliance patterns and solutions
 - **[Testing Guide](docs/testing-guide.md)** - Code quality standards and common issue resolution
 
 **No more trial-and-error debugging** - our documentation provides proven patterns for rapid issue resolution.

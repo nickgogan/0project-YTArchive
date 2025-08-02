@@ -145,16 +145,72 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 
 ## Future Features (Backlog)
 
-### Download Enhancements
+### Near-term (Next 3 months)
+
+#### Download Enhancements
 - [ ] **Partial Download Resume Implementation**
   - [ ] Implement partial download state management
   - [ ] Add resumable download capability with server validation
   - [ ] Create resume endpoints and CLI commands
   - [ ] Test partial download scenarios and edge cases
 
-### CLI & Monitoring
+#### CLI & Monitoring
 - [ ] **Error Recovery CLI Commands**
   - [ ] Create error recovery CLI commands for monitoring and management
+
+### Medium-term (3-6 months)
+
+#### Enhanced Download Capabilities
+- [ ] **Parallel Downloads**: Download multiple videos simultaneously
+- [ ] **Channel Archiving**: Download entire channels with a single command
+- [ ] **Quality Selection**: Allow users to choose video quality preferences
+- [ ] **Audio-Only Mode**: Option to download only audio tracks
+- [ ] **Subtitle Support**: Download subtitles in multiple languages
+
+#### Operational Improvements
+- [ ] **Service Daemonization**: Run services as system daemons
+- [ ] **Auto-restart**: Automatic service recovery on failure
+- [ ] **Resource Limits**: CPU and memory constraints per service
+- [ ] **Scheduled Downloads**: Cron-like scheduling for regular archives
+
+#### User Experience
+- [ ] **Web Dashboard**: Simple web UI for monitoring downloads
+- [ ] **Progress Notifications**: Desktop/email notifications on completion
+- [ ] **Batch Configuration**: YAML/JSON files for batch operations
+
+### Long-term (6+ months)
+
+#### Scalability
+- [ ] **Distributed Mode**: Run services across multiple machines
+- [ ] **Message Queue**: Replace HTTP with queue-based communication
+- [ ] **Shared Database**: Centralized state management
+- [ ] **Load Balancing**: Multiple instances of heavy services
+
+#### Storage Features
+- [ ] **Cloud Storage**: Direct upload to S3, Google Drive, Dropbox
+- [ ] **Compression**: Automatic video compression options
+- [ ] **Deduplication**: Detect and handle duplicate content
+- [ ] **Archive Verification**: Periodic integrity checks
+
+#### Advanced Features
+- [ ] **Webhook Support**: Real-time notifications to external services
+- [ ] **API Authentication**: Secure the API for remote access
+- [ ] **Multi-user Support**: User accounts and permissions
+- [ ] **Content Filtering**: Rules-based download filtering
+- [ ] **Bandwidth Management**: Rate limiting and scheduling
+
+#### Integration & Performance
+- [ ] **Plex/Jellyfin**: Direct integration with media servers
+- [ ] **Metadata Export**: Export to various formats (XML, CSV)
+- [ ] **External APIs**: Integration with other archiving tools
+- [ ] **Caching Layer**: Redis/Memcached for metadata caching
+- [ ] **CDN Support**: Download from YouTube CDN endpoints
+- [ ] **GPU Acceleration**: Hardware-accelerated transcoding
+
+#### Compliance & Governance
+- [ ] **GDPR Support**: Data export and deletion capabilities
+- [ ] **Content Policies**: Respect creator preferences
+- [ ] **Geographic Restrictions**: Handle region-locked content
 
 ## Roadmap (Q3-2025)
 
@@ -173,29 +229,6 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 ### 4. **Documentation Polish**
    - Update user guide with new CLI sub-commands (diagnostics, recovery)
    - Add architecture diagram and sequence diagrams
-
-## Implementation Guidelines
-
-### Code Standards
-1. All code must pass `mypy --strict`
-2. Test coverage minimum: 80%
-3. All public APIs must have docstrings
-4. Use type hints throughout
-
-### Testing Strategy
-1. Unit tests for all business logic
-2. Integration tests for service communication
-3. End-to-end tests for critical paths
-4. Mock external dependencies (YouTube API, file system)
-
-### Definition of Done
-- [ ] Feature is implemented and working
-- [ ] Unit tests written and passing
-- [ ] Integration tests updated
-- [ ] Documentation updated
-- [ ] Code reviewed (self-review for solo project)
-- [ ] No linting errors
-- [ ] Type checking passes
 
 ## Risk Mitigation
 
@@ -226,4 +259,4 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 
 ---
 
-_For detailed historical milestones and achievement narratives, see `ProjectHistory.md`._
+_For detailed historical milestones and achievement narratives, see `CHANGELOG.md`. For development standards and guidelines, see `docs/development-guide.md`._
