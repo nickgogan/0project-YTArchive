@@ -1,0 +1,3 @@
+# Treat technical & architecture documentation like a diffusion model
+
+It's better to start with a lot of documentation but specific to your tech stack. Imagine this as a sort of infinite possibilities, like a picture of static on TV - this represents maximum entropy. In the diffusion model analogy, these models start with such a picture. From there, they use diffusion to get closer and closer to the target image specified by the user. In a similar manner, the technical docs will become more precise and helpful over time as the SWE, App Architect, and Project Manager agents proceed through their individual and inter-personal feedback loops and CRUD the documentation files.
