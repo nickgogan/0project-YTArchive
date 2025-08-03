@@ -100,28 +100,80 @@ This document captures all architectural decisions and design choices made for t
 
 ## Configuration Management
 
-### Current Implementation Strategy (v0.1.0)
-- **Decision**: Minimal configuration with Pydantic BaseSettings
-- **Implementation**: Services use basic host/port configuration only
-- **Format**: Environment variables via .env files
-- **Rationale**: Simple for personal use, reduces initial complexity
-- **Alternative Rejected**: Full TOML configuration system (deferred for simplicity)
+### Architectural Approach: "Aligned Minimalism" (v0.2.0+)
+- **Decision**: TOML-based configuration system with enterprise-grade reliability patterns
+- **Rationale**: Maintains YTArchive's "intentional simplicity" while adding operational convenience
+- **Implementation**: Service-specific configuration classes extending existing BaseSettings pattern
+- **Alternative Rejected**: Enterprise Configuration Management (deemed architecturally inconsistent)
 
-### Service Configuration Pattern
-- **Decision**: Hardcoded service-specific configurations
-- **Implementation**: Retry configs, timeouts, and limits embedded in service code
-- **Rationale**: Simplifies deployment and reduces configuration errors
-- **Trade-off**: Less flexibility for advanced users, but maintains simplicity
+### Configuration Architecture Pattern
+- **Decision**: Extend existing `BaseService` + `ServiceSettings` pattern with TOML support
+- **Implementation Pattern**:
+  ```python
+  class JobsServiceConfig(ServiceSettings):
+      model_config = SettingsConfigDict(
+          toml_file="config.toml",
+          env_prefix="JOBS_"
+      )
+
+      @classmethod
+      def load_from_section(cls) -> 'JobsServiceConfig':
+          return error_recovery_manager.execute_with_retry(
+              cls._load_toml_config,
+              ErrorContext(operation="config_load", resource="config.toml")
+          )
+  ```
+- **Configuration File**: Single `config.toml` with service-specific sections
+- **Override Hierarchy**: Environment variables → TOML file → Code defaults
+
+### Service Configuration Integration
+- **Decision**: All 5 services configurable via service-specific sections
+- **Service Sections**: `[services.jobs]`, `[services.metadata]`, `[services.download]`, `[services.storage]`, `[services.logging]`
+- **Implementation**: Service-specific configuration classes with `load_from_section()` methods
+- **Graceful Fallback**: Services function with defaults when configuration missing or invalid
+
+### CLI Configuration Integration
+- **Decision**: Dynamic service URL loading with configuration-driven service discovery
+- **Implementation**: Replace hardcoded `SERVICES` dict with `load_service_urls()` function
+- **Configuration Override**: `--config-file` option for custom configuration files
+- **Backward Compatibility**: All existing CLI functionality preserved with default behavior
+
+### Configuration Validation Framework
+- **Decision**: Extend existing CLI validation framework with TOML support
+- **Implementation**: Enhanced `_validate_configuration()` function with:
+  - TOML file existence and syntax validation
+  - Service section presence validation
+  - Required parameter validation
+  - Helpful error messages and auto-fix suggestions
+- **Integration**: Seamless integration with existing `ytarchive config` command
+
+### Error Recovery Integration
+- **Decision**: Configuration operations must integrate with existing ErrorRecoveryManager
+- **Pattern**: Configuration failures use appropriate retry strategies:
+  - File read failures → FileSystemRetryStrategy
+  - TOML parsing errors → ValidationRetryStrategy
+  - Service initialization failures → ServiceStartupRetryStrategy
+- **Reliability**: Configuration loading maintains enterprise-grade error recovery standards
+
+### Memory Safety Requirements
+- **Decision**: Configuration operations must maintain zero-memory-leak standard
+- **Implementation**:
+  - Async context managers for file operations
+  - Explicit cleanup in configuration reloading
+  - Memory leak tests for all configuration operations
+- **Compliance**: Configuration memory operations subject to existing memory safety testing
 
 ### Environment Strategy
 - **Decision**: Single environment configuration (development/personal use)
-- **Rationale**: YTArchive is designed for personal use, eliminates multi-environment complexity
+- **Rationale**: YTArchive designed for personal use, eliminates multi-environment complexity
+- **Override Support**: Environment variables provide configuration overrides (e.g., `JOBS_PORT=8005`)
 - **Alternative Rejected**: Multi-environment support (dev/staging/production - unnecessary complexity)
 
-### Future Configuration Architecture
-- **Planned**: TOML-based centralized configuration with service sections
-- **Research**: Comprehensive configuration refactoring research completed
-- **Timeline**: Configuration enhancement deferred to post-MVP phases
+### Testing Integration
+- **Decision**: Configuration testing integrates with existing 451-test framework
+- **Categories**: Unit tests (config classes), Integration tests (service startup), Memory tests (leak detection)
+- **Quality Gates**: 6 defined quality gates with measurable acceptance criteria
+- **Coverage**: Configuration tests maintain 80% minimum coverage requirement
 
 ## API Design
 
@@ -345,3 +397,9 @@ This document captures all architectural decisions and design choices made for t
 | 2025-01-31 | Multi-tier testing strategy | 451 tests across unit/service/integration layers |
 | 2025-01-31 | Proactive memory leak detection | Critical for long-running service reliability |
 | 2025-01-31 | Click async delegation pattern | Safe coroutine handling in CLI commands |
+| 2025-08-02 | "Aligned Minimalism" configuration approach | TOML config maintains simplicity while adding operational convenience |
+| 2025-08-02 | Service-specific configuration classes | Extend BaseSettings pattern, integrate with ErrorRecoveryManager |
+| 2025-08-02 | Dynamic CLI service discovery | Replace hardcoded URLs with config-driven discovery, fallback to defaults |
+| 2025-08-02 | Configuration validation framework extension | Enhance existing CLI validation with TOML support |
+| 2025-08-02 | Configuration memory safety compliance | Zero-leak standard applies to all configuration operations |
+| 2025-08-02 | Configuration testing integration | Config tests integrate with existing 451-test framework |

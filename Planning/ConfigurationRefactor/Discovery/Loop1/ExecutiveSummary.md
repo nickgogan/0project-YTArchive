@@ -164,25 +164,132 @@ class JobsServiceConfig(BaseSettings):
 
 ---
 
-## 📋 **Architect & PM Action Items**
+## 🏗️ **Strategic Architectural Context**
 
-### **For Architecture Review:**
-1. **Review technical implementation patterns** in research deliverables
-2. **Validate service configuration class design** approach
-3. **Approve TOML integration** with existing Pydantic BaseSettings
-4. **Sign off on CLI enhancement strategy**
+### **Configuration Refactor in Enterprise Architecture**
+**Critical Finding**: Configuration refactor must align with YTArchive's **sophisticated production-grade architecture**:
 
-### **For Project Management:**
-1. **Schedule implementation sprint** (4-6 day effort)
-2. **Assign primary developer** familiar with existing service architecture
-3. **Plan integration testing** with existing test suites
-4. **Schedule stakeholder demo** of configuration management capabilities
+- **Enterprise Error Recovery**: 4-tier retry strategy system with ErrorRecoveryManager
+- **451-Test Quality Framework**: Unit (210) + Service (186) + Integration (55) + Memory tests
+- **Rich CLI Architecture**: Async-first terminal UI with progress tracking
+- **Memory Safety**: Proactive leak detection and resource management
+- **Service Mesh**: 5-service microarchitecture with Jobs service orchestration
 
-### **Decision Points:**
-- ✅ **Technical approach approved** - research complete
-- 🔄 **Implementation timing** - ready when development capacity available
-- 🔄 **Priority vs other initiatives** - project manager decision
-- 🔄 **Resource allocation** - minimal impact on other projects
+**Architectural Alignment Required**: Configuration system must match the **enterprise-grade reliability standards** already established.
+
+---
+
+## 📋 **Architect-Specific Directives**
+
+### **🎯 Critical Architecture Review Points**
+
+#### **1. Production Reliability Integration**
+**DIRECTIVE**: Ensure configuration failures integrate with existing error recovery framework
+- **Review**: How config loading failures trigger ErrorRecoveryManager patterns
+- **Validate**: Configuration validation uses same error classification as existing services
+- **Approve**: Fail-fast config validation aligns with service startup reliability patterns
+
+#### **2. Testing Strategy Compliance**
+**DIRECTIVE**: Configuration implementation must maintain 451-test quality standard
+- **Review**: Configuration tests follow existing multi-tier pattern (unit/service/integration)
+- **Validate**: Memory leak testing coverage for configuration loading/reloading
+- **Approve**: Test coverage maintains 80% minimum with zero regression tolerance
+
+#### **3. CLI Architecture Consistency**
+**DIRECTIVE**: Configuration commands must match existing Rich terminal UI patterns
+- **Review**: `ytarchive config` commands use async delegation pattern
+- **Validate**: Configuration UI maintains Rich progress/table/panel styling
+- **Approve**: Error handling uses existing safe coroutine cleanup patterns
+
+#### **4. Service Communication Alignment**
+**DIRECTIVE**: Dynamic service URL loading must preserve existing service mesh reliability
+- **Review**: Configuration-driven service discovery maintains hardcoded URL simplicity
+- **Validate**: Service registry integration doesn't break existing orchestration patterns
+- **Approve**: Configuration changes don't affect Jobs service coordination logic
+
+### **🔧 Technical Architecture Validation**
+
+#### **Service Integration Pattern Compliance**
+```python
+# ARCHITECT REVIEW REQUIRED: Ensure this aligns with existing BaseService pattern
+class JobsServiceConfig(ServiceSettings):  # Must extend existing ServiceSettings
+    # Configuration properties here
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Must integrate with existing error recovery injection
+        self.error_recovery = ErrorRecoveryManager(...)
+```
+
+#### **Memory Safety Pattern Compliance**
+**CRITICAL**: Configuration loading must follow existing resource management patterns:
+- Use async context managers for file operations
+- Implement explicit cleanup in configuration reloading
+- Add memory leak tests for configuration operations
+
+#### **Error Recovery Integration Pattern**
+**CRITICAL**: Configuration failures must integrate with existing retry strategies:
+- Configuration file read failures → FileSystemRetryStrategy
+- TOML parsing errors → ValidationRetryStrategy
+- Service initialization failures → ServiceStartupRetryStrategy
+
+### **🎯 Strategic Architecture Decisions Required**
+
+#### **1. Configuration Sophistication Level**
+**DECISION NEEDED**: Given YTArchive's enterprise-grade architecture, should configuration be:
+- **Option A**: Simple TOML loading (matches current minimal approach)
+- **Option B**: Enterprise configuration management (matches error recovery sophistication)
+
+**ARCHITECT RECOMMENDATION**: Validate against **architectural consistency principle**
+
+#### **2. Service Discovery Evolution**
+**DECISION NEEDED**: How does configuration refactor affect service architecture?
+- **Current**: Hardcoded URLs in CLI (intentional simplicity)
+- **Future**: Configuration-driven service discovery
+- **Integration**: Jobs service registry enhancement?
+
+**ARCHITECT REVIEW**: Ensure alignment with documented "intentional simplicity" decisions
+
+#### **3. Testing Architecture Extension**
+**DECISION NEEDED**: Configuration testing integration with existing 451-test framework:
+- Add configuration-specific test tier?
+- Integrate with existing service/integration tests?
+- Memory leak testing for configuration operations?
+
+### **🚨 Architecture Risk Assessment**
+
+#### **Sophisticated System Integration Risks**
+| Risk | Architecture Impact | Mitigation Required |
+|------|-------------------|-------------------|
+| Configuration complexity mismatch | Breaks architectural simplicity principle | Architect must validate complexity alignment |
+| Error recovery integration | Could break existing 4-tier retry system | Mandatory integration with ErrorRecoveryManager |
+| CLI async pattern disruption | Could break Rich terminal UI patterns | Must use async delegation pattern |
+| Memory management regression | Could introduce leaks in leak-free system | Mandatory memory leak testing |
+| Service mesh disruption | Could break Jobs service orchestration | Careful service discovery integration |
+
+#### **Enterprise Architecture Compliance**
+**CRITICAL VALIDATION POINTS**:
+- Configuration system maintains zero-memory-leak standard
+- Error handling integrates with existing ErrorRecoveryManager
+- CLI integration uses Rich terminal UI patterns
+- Service communication preserves orchestration reliability
+- Testing maintains 451-test quality gate standards
+
+### **📋 Enhanced Action Items**
+
+#### **For Architecture Review:**
+1. **Validate architectural consistency** - Configuration sophistication vs. system complexity
+2. **Review error recovery integration** - Configuration failures in ErrorRecoveryManager
+3. **Approve CLI pattern compliance** - Rich terminal UI and async delegation patterns
+4. **Sign off on service mesh impact** - Jobs service orchestration preservation
+5. **Validate memory safety compliance** - Resource management and leak prevention
+6. **Review testing architecture extension** - 451-test framework integration
+
+#### **For Project Management:**
+1. **Schedule comprehensive integration testing** - Must validate against all 451 existing tests
+2. **Plan memory leak validation** - Configuration operations leak testing
+3. **Coordinate with error recovery testing** - Integration with existing retry frameworks
+4. **Allocate CLI testing resources** - Rich terminal UI pattern validation
 
 ---
 
@@ -203,9 +310,163 @@ class JobsServiceConfig(BaseSettings):
 
 ---
 
-**Research Status**: ✅ **COMPLETE**
-**Implementation Readiness**: ✅ **READY TO PROCEED**
-**Risk Level**: 🟢 **LOW**
-**Business Value**: 🟢 **HIGH**
+---
 
-**Recommendation**: **APPROVE FOR IMPLEMENTATION** - Clear path, low risk, high value delivery.
+## 🎯 **Architect Strategic Recommendations**
+
+### **Architectural Consistency Analysis**
+**Key Finding**: YTArchive exhibits **mixed architectural sophistication**:
+- **Sophisticated**: Error recovery (enterprise-grade), Testing (451 tests), Memory management (leak-free)
+- **Minimal**: Configuration (hardcoded), Service discovery (static URLs)
+
+**ARCHITECT DECISION REQUIRED**: Choose configuration sophistication level that maintains architectural coherence.
+
+### **Recommended Configuration Architecture Tier**
+**Option A: Aligned Minimalism** (RECOMMENDED)
+- Simple TOML loading with Pydantic BaseSettings
+- Maintain hardcoded fallbacks for reliability
+- Focus on operational convenience, not enterprise features
+- **Alignment**: Matches "intentional simplicity" decisions for personal use
+
+**Option B: Enterprise Configuration**
+- Dynamic configuration reloading
+- Configuration management service
+- Advanced validation and monitoring
+- **Risk**: Creates architectural inconsistency with intentional simplicity
+
+### **Integration Architecture Pattern**
+```python
+# RECOMMENDED: Maintain architectural simplicity while adding configuration
+class ServiceConfig(ServiceSettings):
+    """Simple configuration with enterprise-grade error handling"""
+
+    @classmethod
+    def load_with_recovery(cls, config_path: str) -> 'ServiceConfig':
+        """Use existing ErrorRecoveryManager for config loading reliability"""
+        return error_recovery_manager.execute_with_retry(
+            cls._load_toml_config,
+            ErrorContext(operation="config_load", resource=config_path)
+        )
+```
+
+### **Critical Architect Validations**
+
+#### **1. Architectural Coherence Check**
+- **Question**: Does configuration complexity match error recovery sophistication?
+- **Validation**: Review against "intentional simplicity" principle in ArchitectureGuide.md
+- **Decision**: Approve complexity level that maintains architectural coherence
+
+#### **2. Service Mesh Integration Review**
+- **Question**: How does configuration affect Jobs service orchestration?
+- **Validation**: Ensure service discovery changes don't break coordination patterns
+- **Decision**: Approve service URL loading approach
+
+#### **3. CLI Architecture Compliance**
+- **Question**: Do configuration commands match Rich terminal UI patterns?
+- **Validation**: Review async delegation and error handling patterns
+- **Decision**: Approve CLI integration approach
+
+#### **4. Testing Strategy Extension**
+- **Question**: How does configuration testing integrate with 451-test framework?
+- **Validation**: Ensure memory leak testing and multi-tier compliance
+- **Decision**: Approve testing approach that maintains quality gates
+
+### **Architecture Decision Framework**
+
+#### **Simplicity Principle Validation**
+1. **Does configuration add essential operational value?** → YES (eliminate hardcoded values)
+2. **Does configuration maintain deployment simplicity?** → Depends on implementation
+3. **Does configuration align with "personal use" architecture principle?** → Must validate
+
+#### **Enterprise Standards Compliance**
+1. **Does configuration use existing error recovery patterns?** → Must integrate
+2. **Does configuration maintain memory safety standards?** → Must test
+3. **Does configuration follow existing CLI patterns?** → Must comply
+4. **Does configuration preserve service orchestration reliability?** → Must validate
+
+### **Strategic Implementation Guidance**
+
+**PHASE 1**: Architectural Alignment
+- Architect reviews configuration sophistication against system coherence
+- Validates integration patterns with existing enterprise components
+- Approves testing strategy extension
+
+**PHASE 2**: Pattern Compliance Implementation
+- Configuration loading uses ErrorRecoveryManager patterns
+- CLI commands follow Rich terminal UI and async delegation patterns
+- Memory leak testing added for configuration operations
+
+**PHASE 3**: Service Integration Validation
+- Service discovery maintains orchestration reliability
+- Dynamic URL loading preserves service mesh patterns
+- Jobs service registry integration (if approved)
+
+---
+
+## 🎯 **ARCHITECTURAL WORK COMPLETE - READY FOR PROJECT MANAGER**
+
+### **Status Update: August 02, 2025**
+
+**Research Status**: ✅ **COMPLETE**
+**Architectural Review**: ✅ **COMPLETE**
+**Implementation Documents**: ✅ **COMPLETE**
+**Project Manager Readiness**: ✅ **READY FOR TASK BREAKDOWN**
+
+### **Architectural Documents Created**
+
+The following comprehensive architectural documents have been created in `Planning/ConfigurationRefactor/Discovery/Loop1/ArchitectureDocuments/`:
+
+1. **✅ ArchitecturalDecision.md** - Formal architectural decision approving "Aligned Minimalism" approach
+2. **✅ ImplementationSpecification.md** - Detailed technical specification with code patterns and examples
+3. **✅ ServiceIntegrationChecklist.md** - Service-specific integration steps and validation checklists
+4. **✅ QualityGatesAndAcceptanceCriteria.md** - Success metrics and validation requirements
+5. **✅ RiskMitigationPlan.md** - Comprehensive risk assessment and mitigation strategies
+6. **✅ ImplementationRoadmap.md** - 6-day implementation timeline with daily deliverables
+
+### **Architectural Decisions Approved**
+
+**Configuration Sophistication**: ✅ **"Aligned Minimalism" APPROVED**
+- Simple TOML configuration with enterprise-grade reliability
+- Maintains YTArchive's "intentional simplicity" philosophy
+- Leverages existing architecture patterns for minimal risk
+
+**Integration Approach**: ✅ **EXTEND EXISTING ARCHITECTURE**
+- Service-specific configuration classes extending `ServiceSettings`
+- Dynamic CLI service discovery with fallback to defaults
+- Enhanced validation framework building on existing CLI patterns
+
+**Quality Standards**: ✅ **ENTERPRISE-GRADE COMPLIANCE REQUIRED**
+- Zero tolerance for memory leaks in configuration operations
+- Integration with existing ErrorRecoveryManager framework
+- Maintenance of 451-test quality gate standards
+
+### **Project Manager Authorization**
+
+**ARCHITECT APPROVAL**: ✅ **GRANTED**
+**IMPLEMENTATION AUTHORITY**: ✅ **AUTHORIZED**
+
+The Project Manager is now authorized to:
+1. **Create implementation tasks** based on provided specifications
+2. **Assign development team** to 6-day implementation timeline
+3. **Begin Phase 1** (Service Configuration Classes) immediately
+4. **Monitor quality gates** using provided acceptance criteria
+5. **Escalate risks** using provided risk mitigation procedures
+
+### **Implementation Readiness Confirmed**
+
+**Architecture Risk Level**: 🟡 **MODERATE** → **WELL-MANAGED**
+- Comprehensive risk mitigation plan in place
+- Daily monitoring and quality validation procedures defined
+- Clear escalation paths for critical risks
+
+**Business Value**: 🟢 **HIGH** (operational convenience + architectural alignment)
+**Technical Risk**: 🟢 **LOW** (existing architecture perfectly suited for integration)
+**Success Probability**: 🟢 **HIGH** (clear implementation path with comprehensive oversight)
+
+**Final Status**: **✅ APPROVED FOR IMMEDIATE IMPLEMENTATION**
+- **All architectural work complete**
+- **Implementation guidance comprehensive and detailed**
+- **Quality assurance framework established**
+- **Risk management procedures defined**
+
+**Next Action**: Project Manager proceeds with task breakdown and team assignment following ImplementationRoadmap.md
