@@ -215,6 +215,7 @@
 - All architect-approved initiatives requiring implementation planning
 - When architectural specifications are complete and ready for execution planning
 - Before authorizing team assignment and resource allocation for implementation
+- After completing project integration (Phase 6) into main project roadmap
 
 ### **Template Customization**
 - **Adapt sections** based on initiative complexity and scope
