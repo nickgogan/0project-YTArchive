@@ -10,10 +10,13 @@ This document captures all architectural decisions and design choices made for t
 5. [API Design](#api-design)
 6. [Data Flow](#data-flow)
 7. [Error Handling & Recovery](#error-handling--recovery)
-8. [Logging & Monitoring](#logging--monitoring)
-9. [Development Approach](#development-approach)
-10. [Versioning Strategy](#versioning-strategy)
-11. [Future Enhancements](#future-enhancements)
+8. [CLI Architecture](#cli-architecture)
+9. [Testing Strategy](#testing-strategy)
+10. [Memory Management](#memory-management)
+11. [Logging & Monitoring](#logging--monitoring)
+12. [Development Approach](#development-approach)
+13. [Versioning Strategy](#versioning-strategy)
+14. [Future Enhancements](#future-enhancements)
 
 ## Service Architecture
 
@@ -97,15 +100,28 @@ This document captures all architectural decisions and design choices made for t
 
 ## Configuration Management
 
-### Configuration Strategy
-- **Decision**: Single TOML configuration file with environment variable overrides
-- **Rationale**: TOML is Python-friendly, supports complex structures, simple for personal use
-- **Alternative Rejected**: YAML (parsing complexity), JSON (no comments)
+### Current Implementation Strategy (v0.1.0)
+- **Decision**: Minimal configuration with Pydantic BaseSettings
+- **Implementation**: Services use basic host/port configuration only
+- **Format**: Environment variables via .env files
+- **Rationale**: Simple for personal use, reduces initial complexity
+- **Alternative Rejected**: Full TOML configuration system (deferred for simplicity)
+
+### Service Configuration Pattern
+- **Decision**: Hardcoded service-specific configurations
+- **Implementation**: Retry configs, timeouts, and limits embedded in service code
+- **Rationale**: Simplifies deployment and reduces configuration errors
+- **Trade-off**: Less flexibility for advanced users, but maintains simplicity
 
 ### Environment Strategy
 - **Decision**: Single environment configuration (development/personal use)
 - **Rationale**: YTArchive is designed for personal use, eliminates multi-environment complexity
 - **Alternative Rejected**: Multi-environment support (dev/staging/production - unnecessary complexity)
+
+### Future Configuration Architecture
+- **Planned**: TOML-based centralized configuration with service sections
+- **Research**: Comprehensive configuration refactoring research completed
+- **Timeline**: Configuration enhancement deferred to post-MVP phases
 
 ## API Design
 
@@ -133,35 +149,116 @@ This document captures all architectural decisions and design choices made for t
 ## Error Handling & Recovery
 
 ### Error Recovery Architecture
-- **Decision**: Hybrid error recovery library with service-specific implementations
-- **Implementation**: Central `services/error_recovery/` package providing shared components
-- **Components**:
-  - ErrorRecoveryManager: Central coordinator for retry logic
-  - Retry Strategies: Exponential backoff, circuit breaker, adaptive, fixed delay
-  - Error Reporting: Structured logging and diagnostics
-  - Service Integration: Abstract interfaces for service-specific handlers
+- **Decision**: Enterprise-grade error recovery framework for production reliability
+- **Implementation**: Comprehensive `services/error_recovery/` package with pluggable components
+- **Rationale**: Personal use project requires high reliability for long-running downloads
+- **Alternative Rejected**: Simple retry logic (insufficient for complex failure scenarios)
 
-### Retry Strategy
-- **Decision**: Multiple retry strategies with configurable selection
-- **Available Strategies**:
-  - ExponentialBackoffStrategy: Standard exponential backoff with jitter
-  - CircuitBreakerStrategy: Fail-fast when error rates exceed thresholds
-  - AdaptiveStrategy: Dynamic adjustment based on success/failure patterns
-  - FixedDelayStrategy: Simple fixed-interval retries for predictable scenarios
-- **Configuration**: Per-operation retry limits, delays, and strategy selection
-- **Fallback**: Manual intervention after all automatic recovery attempts
+### Core Components
+- **ErrorRecoveryManager**: Central coordinator implementing execute_with_retry pattern
+- **Strategy Pattern**: Pluggable retry strategies with different characteristics
+- **Error Classification**: Automatic retry reason determination from exception types
+- **Service Integration**: Dependency injection for service-specific error handlers
+- **Context Tracking**: Comprehensive operation tracking with attempt history
 
-### Error Classification
-- **Decision**: Structured error severity and categorization
-- **Severities**: LOW, MEDIUM, HIGH, CRITICAL with appropriate escalation
-- **Error Context**: Capture operation details, timestamps, retry history
-- **Recovery Guidance**: Automated suggestions for common error patterns
+### Retry Strategies
+- **Decision**: Multiple specialized strategies for different failure patterns
+- **ExponentialBackoffStrategy**: Standard backoff with jitter for general failures
+- **CircuitBreakerStrategy**: Fail-fast pattern when error rates exceed thresholds
+- **AdaptiveStrategy**: Dynamic adjustment based on historical success/failure patterns
+- **FixedDelayStrategy**: Predictable intervals for rate-limited scenarios
+- **Configuration**: Strategy selection per operation type with fallback chains
 
-### Service Integration Pattern
-- **Decision**: Abstract interfaces with dependency injection
-- **Benefits**: Service-specific error handling while maintaining consistency
-- **Implementation**: Services implement ServiceErrorHandler interface
-- **Testing**: Comprehensive test coverage for all error recovery scenarios
+### Error Classification & Reporting
+- **Decision**: Structured error categorization with automated retry decisions
+- **Categories**: Network, API quota, rate limiting, download failures, service unavailable
+- **Severity Levels**: Automatic escalation based on failure patterns and context
+- **Reporting**: Structured error reports with recovery suggestions and context
+- **Integration**: Seamless integration with logging service for error tracking
+
+### Production Reliability Features
+- **Operation Tracking**: Active recovery operations monitoring with UUIDs
+- **Graceful Degradation**: Service-specific handlers with fallback to general retry
+- **Resource Cleanup**: Automatic cleanup of failed operations and tracking state
+- **Comprehensive Testing**: Full test coverage including edge cases and failure scenarios
+
+## CLI Architecture
+
+### Design Philosophy
+- **Decision**: Rich terminal interface with async-first architecture
+- **Implementation**: Click framework with async delegation pattern
+- **Rationale**: Enhanced user experience for long-running operations
+- **Alternative Rejected**: Simple synchronous CLI (insufficient for complex workflows)
+
+### User Interface Pattern
+- **Terminal UI**: Rich library for progress bars, tables, panels, and styled output
+- **Progress Tracking**: Real-time progress updates for downloads and batch operations
+- **Error Display**: Safe error message handling including coroutine cleanup
+- **JSON Output**: Optional machine-readable output for all commands
+
+### Service Integration
+- **Decision**: Direct HTTP communication with hardcoded service URLs
+- **Implementation**: AsyncHttpx client for all service communication
+- **Rationale**: Simple service discovery appropriate for personal use
+- **Alternative Rejected**: Dynamic service discovery (unnecessary complexity)
+
+### Command Architecture
+- **Pattern**: Click commands delegate to async implementation functions
+- **Error Handling**: Comprehensive error boundary with safe message conversion
+- **Configuration**: Custom parameter types for complex configurations (retry configs)
+- **Extensibility**: Command groups for logical organization (playlist, recovery, diagnostics)
+
+## Testing Strategy
+
+### Multi-Tier Testing Architecture
+- **Decision**: Comprehensive testing strategy with multiple validation layers
+- **Implementation**: 451 tests across unit, service, and integration tiers
+- **Quality Gate**: 100% test success rate required for all commits
+- **Alternative Rejected**: Minimal testing (insufficient for production reliability)
+
+### Test Organization
+- **Unit Tests**: 210 tests covering business logic, models, and utilities
+- **Service Tests**: 186 tests for service-specific functionality and API contracts
+- **Integration Tests**: 55 tests for end-to-end workflows and service coordination
+- **Memory Tests**: Comprehensive leak detection across all service operations
+
+### Quality Assurance
+- **Coverage Requirements**: 80% minimum code coverage with pytest-cov
+- **Type Safety**: Full mypy --strict compliance for all code
+- **Memory Safety**: Zero tolerance for memory leaks in long-running operations
+- **Performance Testing**: Load testing and benchmark validation for critical paths
+
+### Testing Infrastructure
+- **Mocking Strategy**: Comprehensive mocking of external dependencies (YouTube API, filesystem)
+- **Fixture Management**: Reusable test fixtures for consistent test environments
+- **Async Testing**: Full async test support with pytest-asyncio
+- **Continuous Validation**: Automated test execution in development workflow
+
+## Memory Management
+
+### Memory Safety Strategy
+- **Decision**: Proactive memory leak detection and prevention
+- **Implementation**: Automated memory leak testing for all services
+- **Rationale**: Critical for long-running download operations and service reliability
+- **Alternative Rejected**: Reactive memory monitoring (insufficient for prevention)
+
+### Leak Detection Architecture
+- **Automated Testing**: Memory leak tests integrated into test suite
+- **Service Coverage**: Individual leak tests for all major services
+- **Operation Tracking**: Memory usage monitoring during long-running operations
+- **Reporting**: Detailed memory leak reports with trace information
+
+### Resource Management
+- **Lifecycle Management**: Explicit resource cleanup in service shutdown
+- **Connection Pooling**: Proper HTTP client resource management
+- **File Handling**: Safe file operations with context managers
+- **Background Tasks**: Proper async task cleanup and cancellation
+
+### Prevention Patterns
+- **Context Managers**: Consistent use of async context managers for resources
+- **Explicit Cleanup**: Manual resource cleanup in critical sections
+- **Monitoring**: Runtime memory usage tracking for anomaly detection
+- **Validation**: Memory leak tests as part of continuous integration
 
 ## Logging & Monitoring
 
@@ -241,3 +338,10 @@ This document captures all architectural decisions and design choices made for t
 | 2024-01-22 | Monorepo structure | Easier dependency management |
 | 2024-01-22 | Centralized logging service | Single place to query all service logs |
 | 2025-01-31 | Single environment configuration | Personal use project, eliminate multi-env complexity |
+| 2025-01-31 | Minimal configuration implementation | Defer TOML complexity, hardcode service configs |
+| 2025-01-31 | Enterprise error recovery framework | Production reliability for long-running downloads |
+| 2025-01-31 | Rich CLI with async architecture | Enhanced UX for complex download workflows |
+| 2025-01-31 | Hardcoded service URLs | Intentional simplicity for personal use |
+| 2025-01-31 | Multi-tier testing strategy | 451 tests across unit/service/integration layers |
+| 2025-01-31 | Proactive memory leak detection | Critical for long-running service reliability |
+| 2025-01-31 | Click async delegation pattern | Safe coroutine handling in CLI commands |

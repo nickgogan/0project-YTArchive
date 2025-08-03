@@ -143,6 +143,29 @@ Jobs Service → Logging Service → Storage Service → Metadata Service → Do
 - [x] Download service integration
 - [x] Comprehensive retry strategies (exponential backoff, circuit breaker, adaptive)
 
+### 5.3 Batch File Processing
+- [ ] **CLI Batch Command Implementation**
+  - [ ] Add `ytarchive batch --file urls.txt` command for file-based URL processing
+  - [ ] Support mixed video and playlist URLs in same input file
+  - [ ] Implement URL validation and separation logic
+  - [ ] Add batch processing options (quality, max-concurrent, output directory)
+- [ ] **File Format Support**
+  - [ ] Support plain text files (one URL per line)
+  - [ ] Handle empty lines and comments (lines starting with #)
+  - [ ] Add file validation and error reporting
+- [ ] **Integration with Existing Infrastructure**
+  - [ ] Leverage existing `CreateJobRequest` system for job creation
+  - [ ] Reuse playlist batch processing optimizations for large file processing
+  - [ ] Integrate with recovery plans for failed batch downloads
+- [ ] **Enhanced CLI Options**
+  - [ ] Add `--dry-run` flag to preview batch operations without execution
+  - [ ] Support `--continue-on-error` to process remaining URLs if some fail
+  - [ ] Add progress reporting for batch file processing
+- [ ] **Testing and Documentation**
+  - [ ] Add comprehensive test coverage for batch processing
+  - [ ] Update user guide with batch processing examples
+  - [ ] Create sample batch files for different use cases
+
 ## Future Features (Backlog)
 
 ### Near-term (Next 3 months)
