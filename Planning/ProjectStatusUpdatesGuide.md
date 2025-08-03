@@ -37,7 +37,15 @@ This guide provides step-by-step procedures for maintaining the YTArchive projec
    #### 🔧 **Technical Implementation**
    - Specific technical details
    - Architecture decisions made
+
+   **Related Commits**: `abc1234`, `def5678`, `ghi9012`
    ```
+
+   **💡 Commit ID Best Practice**:
+   - Always include git commit IDs at the end of CHANGELOG entries
+   - Use `git log --oneline -10` to find recent commit hashes
+   - Format as: `**Related Commits**: \`hash1\`, \`hash2\`, \`hash3\``
+   - This enables easy traceability and verification of changes
 
 3. **Update Current Status metrics**:
    ```markdown
